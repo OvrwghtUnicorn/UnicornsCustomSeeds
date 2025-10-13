@@ -1,0 +1,9 @@
+{
+	"name": "Unicorns Custom Seeds",
+	"version_number": "1.0.0",
+	"description": "Get your custom seeds from unicorn",
+	"website_url": "",
+	"dependencies": [
+		"LavaGang-MelonLoader-0.7.0"
+	]
+}
