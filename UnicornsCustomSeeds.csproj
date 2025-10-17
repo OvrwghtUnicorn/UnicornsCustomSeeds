@@ -11,7 +11,7 @@
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Configurations>MONO;IL2CPP</Configurations>
-		<ReleaseDir>Q:\code\UnityModding\Schedule_1_Modding\UnicornsCustomSeeds\UnicornsCustomSeeds\BundleInfo</ReleaseDir>
+		<ReleaseDir>Q:\code\UnityModding\Schedule_1_Modding\UnicornsCustomSeeds\BundleInfo</ReleaseDir>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
@@ -46,6 +46,7 @@
 		<Compile Include="TemplateUtils\SeedIconGenerator.cs" />
 		<Compile Include="TemplateUtils\PrefabDebugger.cs" />
 		<Compile Include="TemplateUtils\Utility.cs" />
+		<Folder Include="CustomSeedQuest\" />
 		<Folder Include="Libs\" />
 		<Folder Include="Assets\" />
 		<EmbeddedResource Include="Assets\customshaders" />

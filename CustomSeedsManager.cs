@@ -1,10 +1,14 @@
-﻿using Il2CppScheduleOne;
+﻿using Il2CppInterop.Runtime;
+using Il2CppScheduleOne;
 using Il2CppScheduleOne.AvatarFramework.Equipping;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
+using Il2CppScheduleOne.Messaging;
+using Il2CppScheduleOne.NPCs.CharacterClasses;
 using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.UI.Shop;
 using Il2CppSystem.Runtime.InteropServices.ComTypes;
 using MelonLoader;
@@ -15,6 +19,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UIElements;
 using static Il2CppTMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 using Il2Generic = Il2CppSystem.Collections.Generic;
@@ -30,6 +35,7 @@ namespace UnicornsCustomSeeds
 
     public static class CustomSeedsManager
     {
+        public static MSGConversation albertsConvo;
         public static Dictionary<string, Sprite> seedIcons = new Dictionary<string, Sprite>();
         public static Dictionary<string, WeedAppearanceSettings> appearanceMap = new Dictionary<string, WeedAppearanceSettings>();
         public static List<(string seedId, string baseSeedId)> DiscoveredSeeds = new();
@@ -71,7 +77,7 @@ namespace UnicornsCustomSeeds
                 return;
             }
 
-
+            GetAlbertHoover();
 
             InitDictionary();
             if (!baseSeedDefinitions.ContainsKey("ogkushseed"))
@@ -89,6 +95,39 @@ namespace UnicornsCustomSeeds
                 }
             }
 
+        }
+
+        public static void GetAlbertHoover()
+        {
+            Albert albert = GameObject.FindObjectOfType<Albert>();
+            if(albert != null)
+            {
+                Utility.Log("Found Albert Hoover");
+                MSGConversation convo = albert.MSGConversation;
+                if(convo != null)
+                {
+                    Utility.Log("Found Alberts Conversation");
+                    albertsConvo = convo;
+                    MessageSenderInterface senderInterface = convo.senderInterface;
+                    SendableMessage sendable = albertsConvo.CreateSendableMessage("Order Seeds");
+                    sendable.onSent += (Action) OnSent;
+                    //sendable.onSelected = (Action) OnSelected;
+                }
+
+            }
+        }
+
+        public static void OnSent()
+        {
+            MessageChain messageChain = new MessageChain();
+            messageChain.Messages.Add("Drop the weed mix and cash in my drop box.");
+            messageChain.id = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
+            albertsConvo.SendMessageChain(messageChain, 0.5f, true, true);
+        }
+
+        public static void OnSelected()
+        {
+            albertsConvo.senderInterface.SetVisibility(MessageSenderInterface.EVisibility.Docked);
         }
 
         public static void InitDictionary()
