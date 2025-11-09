@@ -37,16 +37,20 @@
 
 	<ItemGroup>
 		<Compile Include="Core.cs" />
+		<Compile Include="CustomQuests\CustomSeedQuest.cs" />
+		<Compile Include="CustomQuests\CustomSeedQuestData.cs" />
+		<Compile Include="Patches\AddRecipePatch.cs" />
+		<Compile Include="Seeds\UnicornSeedData.cs" />
+		<Compile Include="SupplierStashes\SupplierStashHandler.cs" />
 		<Compile Include="CustomSeedsManager.cs" />
-		<Compile Include="Patches\DeaddropPatches.cs" />
 		<Compile Include="Patches\PersistencePatches.cs" />
 		<Compile Include="SeedFactory.cs" />
 		<Compile Include="SeedVialLabel.cs" />
+		<Compile Include="SupplierStashes\StashManager.cs" />
 		<Compile Include="TemplateUtils\AssetBundleUtils.cs" />
 		<Compile Include="TemplateUtils\SeedIconGenerator.cs" />
 		<Compile Include="TemplateUtils\PrefabDebugger.cs" />
 		<Compile Include="TemplateUtils\Utility.cs" />
-		<Folder Include="CustomSeedQuest\" />
 		<Folder Include="Libs\" />
 		<Folder Include="Assets\" />
 		<EmbeddedResource Include="Assets\customshaders" />
@@ -60,6 +64,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="S1API.Forked" Version="2.4.2" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->

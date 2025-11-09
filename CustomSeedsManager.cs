@@ -2,6 +2,7 @@
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.AvatarFramework.Equipping;
 using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.Messaging;
@@ -13,15 +14,17 @@ using Il2CppScheduleOne.UI.Shop;
 using Il2CppSystem.Runtime.InteropServices.ComTypes;
 using MelonLoader;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnicornsCustomSeeds.CustomQuests;
+using UnicornsCustomSeeds.Seeds;
+using UnicornsCustomSeeds.SupplierStashes;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
-using UnityEngine.Events;
-using UnityEngine.UIElements;
-using static Il2CppTMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
+using UnityEngine.Playables;
 using Il2Generic = Il2CppSystem.Collections.Generic;
 
 namespace UnicornsCustomSeeds
@@ -35,12 +38,13 @@ namespace UnicornsCustomSeeds
 
     public static class CustomSeedsManager
     {
+        public static CustomSeedQuest seedDropoff;
         public static MSGConversation albertsConvo;
         public static Dictionary<string, Sprite> seedIcons = new Dictionary<string, Sprite>();
         public static Dictionary<string, WeedAppearanceSettings> appearanceMap = new Dictionary<string, WeedAppearanceSettings>();
-        public static List<(string seedId, string baseSeedId)> DiscoveredSeeds = new();
+        public static Queue<SeedDefinition> SeedQueue = new Queue<SeedDefinition>();
         public static Dictionary<string, SeedFactory> factories = new();
-        public static Dictionary<string, SeedComponents> loadedSeeds = new();
+        public static Dictionary<string, UnicornSeedData> DiscoveredSeeds = new();
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
@@ -88,13 +92,21 @@ namespace UnicornsCustomSeeds
 
             foreach (var seed in DiscoveredSeeds)
             {
-                SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.seedId);
+                SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Key);
                 if (customDef != null)
                 {
-                    CreateShopListing(customDef, seed.baseSeedId);
+                    CreateShopListing(customDef, seed.Value.baseSeedId);
                 }
             }
 
+        }
+
+        public static void ClearAll()
+        {
+            seedIcons.Clear();
+            appearanceMap.Clear();
+            DiscoveredSeeds.Clear();
+            SeedQueue.Clear();
         }
 
         public static void GetAlbertHoover()
@@ -123,6 +135,55 @@ namespace UnicornsCustomSeeds
             messageChain.Messages.Add("Drop the weed mix and cash in my drop box.");
             messageChain.id = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
             albertsConvo.SendMessageChain(messageChain, 0.5f, true, true);
+
+
+            if(seedDropoff == null)
+            {
+                Utility.Log("Quest Started");
+                seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+            }
+        }
+
+        public static void CompleteQuest(WeedDefinition weedDef)
+        {
+            if(seedDropoff != null)
+            {
+                seedDropoff.Complete();
+                seedDropoff = null;
+                albertsConvo.SendMessage(new Message("I will begin synthesizing the seed", Message.ESenderType.Other, true, -1), true, true);
+                MelonCoroutines.Start(CreateSeed(10f, weedDef));
+            }
+        }
+
+        public static IEnumerator CreateSeed(float delaySeconds, WeedDefinition weedDef)
+        {
+            yield return new WaitForSeconds(delaySeconds);
+
+            var newSeed = factories["ogkushseed"].CreateSeedDefinition(weedDef);
+
+            Singleton<Registry>.Instance.AddToRegistry(newSeed);
+            float price = StashManager.GetIngredientCost(weedDef);
+            UnicornSeedData newSeedData = new UnicornSeedData { 
+                seedId = newSeed.ID,
+                weedId = weedDef.ID,
+                baseSeedId = "ogkushseed",
+                price = price,
+            };
+            DiscoveredSeeds.Add(newSeed.ID, newSeedData);
+            CreateShopListing(newSeed, "ogkushseed", price);
+            SeedQueue.Enqueue(newSeed);
+
+            // 3. You can yield return other things, like waiting for a request, 
+            // or just yield return null to wait until the next frame.
+            yield return null;
+
+            // 4. Repeat logic steps or actions.
+            Utility.Log("Coroutine performing second action in the next frame.");
+
+            // --- Coroutine finishes ---
+            // When the method reaches the end (or hits 'yield break'), the coroutine is complete.
+            Utility.Log("Coroutine finished successfully.");
+            albertsConvo.SendMessage(new Message($"Your seed for {weedDef.name} is complete and available in the shop", Message.ESenderType.Other, true, -1), true, true);
         }
 
         public static void OnSelected()
@@ -339,13 +400,13 @@ namespace UnicornsCustomSeeds
         //    );
         //}
 
-        public static void CreateShopListing(SeedDefinition newSeed, string baseSeed)
+        public static void CreateShopListing(SeedDefinition newSeed, string baseSeed, float price = 10)
         {
             ShopListing baseListing = baseShopListing[baseSeed];
             ShopListing newListing = new ShopListing();
-            newListing.name = $"{newSeed.ID} ($10) (Agriculture, )";
+            newListing.name = $"{newSeed.ID} (${price}) (Agriculture, )";
             newListing.OverridePrice = true;
-            newListing.OverriddenPrice = 10;
+            newListing.OverriddenPrice = price;
             newListing.Item = newSeed;
             newListing.IconTint = new Color(0, 0.859f, 1, 1);
             newListing.MinimumGameCreationVersion = 27;
@@ -356,57 +417,23 @@ namespace UnicornsCustomSeeds
             Shop.RefreshShownItems();
         }
 
-        public static (string weedDefId, string baseSeedId) SeedIdSplitter(string seedId)
-        {
-            string[] parts = seedId.Split('_');
-            if (parts.Length < 2) return (null, null);
-
-            return (parts[0], parts[1]);
-        }
-
-        public static SeedDefinition SeedDefinitionLoader(ItemData itemData)
-        {
-            if (itemData != null)
-            {
-                SeedDefinitionLoader(itemData.ID);
-            }
-            return null;
-        }
-
-        public static SeedDefinition SeedDefinitionLoader(string id)
-        {
-            SeedDefinition newSeed = Registry.GetItem<SeedDefinition>(id);
-            if (newSeed != null)
-            {
-                return newSeed;
-            }
-
-            var parts = SeedIdSplitter(id);
-            if (parts.weedDefId != null && parts.baseSeedId != null)
-            {
-                return SeedDefinitionLoader(parts.weedDefId, parts.baseSeedId);
-            }
-
-            return null;
-        }
-
-        public static SeedDefinition SeedDefinitionLoader(string weedDefId, string baseSeedId)
+        public static SeedDefinition SeedDefinitionLoader(UnicornSeedData newSeedData)
         {
             SeedDefinition newSeed = null;
-            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(weedDefId);
-            SeedDefinition seedDef = Registry.GetItem<SeedDefinition>(baseSeedId);
+            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(newSeedData.weedId);
+            SeedDefinition seedDef = Registry.GetItem<SeedDefinition>(newSeedData.baseSeedId);
 
             if (seedDef != null && weedDef != null)
             {
                 SeedFactory baseFactory;
-                if (factories.ContainsKey(baseSeedId))
+                if (factories.ContainsKey(newSeedData.baseSeedId))
                 {
-                    baseFactory = factories[baseSeedId];
+                    baseFactory = factories[newSeedData.baseSeedId];
                 }
                 else
                 {
                     baseFactory = new SeedFactory(seedDef);
-                    factories.Add(baseSeedId, baseFactory);
+                    factories.Add(newSeedData.baseSeedId, baseFactory);
                 }
 
                 newSeed = baseFactory.CreateSeedDefinition(weedDef);
@@ -415,7 +442,7 @@ namespace UnicornsCustomSeeds
                     Utility.Log("Manager New Seed is null?");
                 }
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
-                DiscoveredSeeds.Add((newSeed.ID, baseSeedId));
+                //DiscoveredSeeds.Add(newSeed.ID, newSeedData);
             }
             else
             {

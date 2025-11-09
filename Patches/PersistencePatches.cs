@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using Il2CppFishNet.Connection;
-using Il2CppNewtonsoft.Json;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
@@ -9,14 +8,61 @@ using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.Persistence.ItemLoaders;
 using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.UI.MainMenu;
 using MelonLoader;
+using Newtonsoft.Json;
 using System.Reflection;
+using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
 using Il2CppGeneric = Il2CppSystem.Collections.Generic;
 
 namespace UnicornsCustomSeeds.Patches
 {
+
+    [HarmonyPatch(typeof(LoadManager), nameof(LoadManager.ExitToMenu))]
+    public static class LoadManager_ExitToMenu_Patch
+    {
+        public static void Postfix(LoadManager __instance, SaveInfo autoLoadSave, MainMenuPopup.Data mainMenuPopup, bool preventLeaveLobby)
+        {
+            var seedList = Singleton<Registry>.Instance.Seeds;
+            var seedListClean = new Il2CppGeneric.List<SeedDefinition>();
+            foreach (var seed in seedList)
+            {
+                if (seed != null && !seed.ID.Contains("customseeddefinition"))
+                {
+                    seedListClean.Add(seed);
+                }
+            }
+
+            Singleton<Registry>.Instance.Seeds = seedListClean;
+        }
+    }
+
+    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new Type[] { typeof(string) })]
+    public static class SaveManager_Save_Patch
+    {
+        public static bool Prefix(SaveManager __instance, string saveFolderPath)
+        {
+            if (string.IsNullOrEmpty(saveFolderPath))
+                return true;
+
+            string filePath = Path.Combine(saveFolderPath, "DiscoveredCustomSeeds.json");
+            List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
+            if (Directory.Exists(saveFolderPath))
+            {
+                foreach (var seed in seedsIl2cpp)
+                {
+                    Utility.Log($"{seed.seedId}");
+                }
+                string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
+                File.WriteAllText(filePath, json);
+                MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
+            }
+
+            return true;
+        }
+    }
 
     [HarmonyPatch(typeof(LoadManager), nameof(LoadManager.StartGame))]
     public static class LoadManager_StartGame_Patch
@@ -39,7 +85,7 @@ namespace UnicornsCustomSeeds.Patches
                     return;
 
                 string filePath = Path.Combine(saveGameFolder, "DiscoveredCustomSeeds.json");
-                Il2CppGeneric.List<string> seedsIl2cpp = null;
+                List<UnicornSeedData> seedsIl2cpp = new List<UnicornSeedData>();
                 Utility.Log(filePath);
                 if (File.Exists(filePath))
                 {
@@ -47,40 +93,23 @@ namespace UnicornsCustomSeeds.Patches
                     string json = File.ReadAllText(filePath);
 
                     // Try array first
-                    seedsIl2cpp = JsonConvert.DeserializeObject<Il2CppGeneric.List<string>>(json);
+                    seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json);
 
                     // Fallback: some setups prefer List<string> over arrays
                     if (seedsIl2cpp == null)
                     {
-                        seedsIl2cpp = new Il2CppGeneric.List<string>();
+                        seedsIl2cpp = new List<UnicornSeedData>();
                     }
 
                     MelonLogger.Msg($"Loaded {seedsIl2cpp.Count} custom seeds from DiscoveredCustomSeeds.json");
                 }
-                else
-                {
-                    // Create default IL2CPP array
-                    seedsIl2cpp = new Il2CppGeneric.List<string>();
-                    seedsIl2cpp.Add("deathfuel_ogkushseed_customseeddefinition");
-                    seedsIl2cpp.Add("superghost_ogkushseed_customseeddefinition");
-                    seedsIl2cpp.Add("granddaddygrool_ogkushseed_customseeddefinition");
-                    seedsIl2cpp.Add("aspendeath_ogkushseed_customseeddefinition");
-                    seedsIl2cpp.Add("imapickle_ogkushseed_customseeddefinition");
-                    seedsIl2cpp.Add("miraclecrystal_ogkushseed_customseeddefinition");
+                
 
-                    // Serialize using Il2CppNewtonsoft into JSON and write file
-                    string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
-                    Directory.CreateDirectory(saveGameFolder);
-                    File.WriteAllText(filePath, json);
-                    MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
-                }
-
-                foreach (string seedId in seedsIl2cpp)
+                foreach (UnicornSeedData seedData in seedsIl2cpp)
                 {
-                    var parts = CustomSeedsManager.SeedIdSplitter(seedId);
-                    if (parts.weedDefId != null && parts.baseSeedId != null)
+                    if (seedData != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
                     {
-                        CustomSeedsManager.loadedSeeds.Add(parts.weedDefId, new SeedComponents { baseSeedId = parts.baseSeedId, seedId = seedId });
+                        CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);
                     }
                 }
 
@@ -104,10 +133,11 @@ namespace UnicornsCustomSeeds.Patches
                 List<string> properties,
                 WeedAppearanceSettings appearance)
         {
-            if (CustomSeedsManager.loadedSeeds.TryGetValue(id, out var parts))
+            if (CustomSeedsManager.DiscoveredSeeds.TryGetValue(id, out var parts))
             {
                 Utility.Log($"[CreateWeed_Patch] Called with id={id}, name={name}, type={type}");
-                CustomSeedsManager.SeedDefinitionLoader(id, parts.baseSeedId);
+                SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(parts);
+                Singleton<Registry>.Instance.Seeds.Add(newSeed);
             }
         }
     }

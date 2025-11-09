@@ -37,7 +37,7 @@ namespace UnicornsCustomSeeds
             if (rootGameObject == null)
             {
                 GameObject go = new GameObject($"{baseSeedDefinition.ID}_CustomSeeds");
-                //go.SetActive(false);
+                go.SetActive(false);
                 rootGameObject = go.transform;
             }
         }
@@ -281,7 +281,6 @@ namespace UnicornsCustomSeeds
             newEquipSeed.Seed = newDef;
             newEquipSeed.AvatarEquippable = CloneAvatarEquippablePrefab(newDef.ID);
             newEquipSeed.AvatarEquippable.name = $"{newDef.ID}_AvatarEquippable";
-
             return newEquipSeed;
         }
 
@@ -315,8 +314,8 @@ namespace UnicornsCustomSeeds
                 weedAppearance = WeedDefinition.GetAppearanceSettings(weedDef.Properties);
             }
 
-            newSeedDef.name = $"{weedDef.ID}_{baseSeedDefinition.ID}_customseeddefinition";
-            newSeedDef.ID = $"{weedDef.ID}_{baseSeedDefinition.ID}_customseeddefinition";
+            newSeedDef.name = $"{weedDef.ID}_customseeddefinition";
+            newSeedDef.ID = $"{weedDef.ID}_customseeddefinition";
             newSeedDef.Name = $"{weedDef.name} Seed";
             newSeedDef.Description = $"{weedDef.name} Seed";
             newSeedDef.Icon = baseSeedDefinition.Icon;
