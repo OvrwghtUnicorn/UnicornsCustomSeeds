@@ -48,6 +48,7 @@ namespace UnicornsCustomSeeds
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
+        public const string BASE_SEED_ID = "ogkushseed";
         public static string baseSeedId = "<SEEDID>_customseeddefinition";
 
         public enum BlendMode { Lerp, Multiply, Add, Screen }
@@ -86,9 +87,9 @@ namespace UnicornsCustomSeeds
             GetAlbertHoover();
 
             InitDictionary();
-            if (!baseSeedDefinitions.ContainsKey("ogkushseed"))
+            if (!baseSeedDefinitions.ContainsKey(BASE_SEED_ID))
             {
-                MelonLogger.Msg("ogkushseed doesn't exist!");
+                MelonLogger.Msg($"{BASE_SEED_ID} doesn't exist!");
                 return;
             }
 
@@ -169,7 +170,7 @@ namespace UnicornsCustomSeeds
                 prodManager.DefaultWeed.LeafMat.color,
                 prodManager.DefaultWeed.StemMat.color);
 
-            prodManager.CreateWeed_Server(payload, "ogkushseed",
+            prodManager.CreateWeed_Server(payload, BASE_SEED_ID,
                                              EDrugType.Marijuana, props, appearance);
         }
 
@@ -178,8 +179,7 @@ namespace UnicornsCustomSeeds
             yield return new WaitForSeconds(delaySeconds);
 
             WeedDefinition baseSeed = StashManager.GetBaseStrain(weedDef);
-
-            var newSeed = factories["ogkushseed"].CreateSeedDefinition(weedDef);
+            var newSeed = factories[BASE_SEED_ID].CreateSeedDefinition(weedDef);
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             float price = StashManager.GetIngredientCost(weedDef);
@@ -187,23 +187,14 @@ namespace UnicornsCustomSeeds
             {
                 seedId = newSeed.ID,
                 weedId = weedDef.ID,
-                baseSeedId = "ogkushseed",
+                baseSeedId = BASE_SEED_ID,
                 price = price,
             };
             DiscoveredSeeds.Add(newSeed.ID, newSeedData);
-            CreateShopListing(newSeed, "ogkushseed", price);
+            CreateShopListing(newSeed, BASE_SEED_ID, price);
             SeedQueue.Enqueue(newSeed);
 
-            // 3. You can yield return other things, like waiting for a request, 
-            // or just yield return null to wait until the next frame.
-            yield return null;
 
-            // 4. Repeat logic steps or actions.
-            Utility.Log("Coroutine performing second action in the next frame.");
-
-            // --- Coroutine finishes ---
-            // When the method reaches the end (or hits 'yield break'), the coroutine is complete.
-            Utility.Log("Coroutine finished successfully.");
 
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null)
@@ -407,34 +398,7 @@ namespace UnicornsCustomSeeds
             }
         }
 
-        //public static Sprite CreateSeedIcon(Transform model, Color? tint = null)
-        //{
-        //    if (model == null) return null;
 
-        //    Utility.Log("[Create Icon] Attempting to Create");
-        //    var generator = Singleton<IconGenerator>.Instance;
-        //    Texture2D icon = generator.GetTexture(model);
-
-        //    if (icon == null) return null;
-
-        //    if (tint.HasValue)
-        //    {
-        //        Color[] pixels = icon.GetPixels();
-        //        for (int i = 0; i < pixels.Length; i++)
-        //        {
-        //            pixels[i] *= tint.Value; // multiply tint
-        //        }
-        //        icon.SetPixels(pixels);
-        //    }
-
-        //    icon.Apply();
-
-        //    return Sprite.Create(
-        //        icon,
-        //        new Rect(0f, 0f, icon.width, icon.height),
-        //        new Vector2(0.5f, 0.5f)
-        //    );
-        //}
 
         public static void CreateShopListing(SeedDefinition newSeed, string baseSeed, float price = 10)
         {

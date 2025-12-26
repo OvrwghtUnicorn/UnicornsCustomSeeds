@@ -23,6 +23,10 @@ namespace UnicornsCustomSeeds.SupplierStashes
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
         public static SupplierStash albertsStash;
         public static bool onClosedExecuting = false;
+        
+        // Constants for Albert's Stash requirements
+        public const int STASH_COST_REQUIREMENT = 500;
+        public const int STASH_QTY_REQUIREMENT = 20;
 
         public static void GetAlbertsStash()
         {
@@ -76,14 +80,14 @@ namespace UnicornsCustomSeeds.SupplierStashes
                 int quantity = weedInstance.Quantity;
                 uint packageAmount = PackageAmount(packaging);
                 uint total = (uint)(quantity * packageAmount);
-                if (cashInstance.Balance >= 500 && total >= 20)
+                if (cashInstance.Balance >= STASH_COST_REQUIREMENT && total >= STASH_QTY_REQUIREMENT)
                 {
                     if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
                         if(CustomSeedsManager.seedDropoff != null)
                         {
-                            weedSlot.ChangeQuantity(-(20/(int)packageAmount));
-                            cashInstance.ChangeBalance(-500);
+                            weedSlot.ChangeQuantity(-(STASH_QTY_REQUIREMENT/(int)packageAmount));
+                            cashInstance.ChangeBalance(-STASH_COST_REQUIREMENT);
                             CustomSeedsManager.CompleteQuest(definition);
                         }
                     }
@@ -198,121 +202,6 @@ namespace UnicornsCustomSeeds.SupplierStashes
         }
 
 
-        /// <summary>
-        /// Public wrapper to start the deep search for a product's ingredients.
-        /// </summary>
-        public static List<PropertyItemDefinition> DeepSearchRecipeMemo(ProductDefinition product)
-        {
-            // We call our new recursive function that returns a list.
-            return DeepSearchRecursiveWithMemo(product, new HashSet<string>());
-        }
-
-        /// <summary>
-        /// The new recursive method that uses memoization to find all base ingredients.
-        /// </summary>
-        private static List<PropertyItemDefinition> DeepSearchRecursiveWithMemo(ProductDefinition product, HashSet<string> visited)
-        {
-            // Base case: The product is null.
-            if (product == null || visited.Contains(product.ID))
-            {
-                return new List<PropertyItemDefinition>();
-            }
-
-            // --- MEMOIZATION CHECK ---
-            // If we've already calculated the ingredients for this product,
-            // immediately return the cached list instead of doing more work.
-            if (ingredientsCache.ContainsKey(product.ID))
-            {
-                return ingredientsCache[product.ID];
-            }
-
-            // Base case: The product is a raw material with no further recipe.
-            if (product.Recipes.Count == 0)
-            {
-                var baseIngredientList = new List<PropertyItemDefinition> { product };
-                // Cache the result for this "base" product before returning.
-                ingredientsCache[product.ID] = baseIngredientList;
-                return baseIngredientList;
-            }
-
-            var ingredientsForThisProduct = new List<PropertyItemDefinition>();
-
-            foreach (var Recipe in product.Recipes)
-            {
-                // --- RECURSIVE STEP ---
-                // If the product is not in the cache, we need to compute its ingredients.
-                var recipeIngredients = new List<PropertyItemDefinition>();
-                // Assuming one recipe per product, as in your original code.
-                var ingredient1 = Recipe.Ingredients[0];
-                var ingredient2 = Recipe.Ingredients[1];
-
-                // Declare the variables to hold the correctly typed ingredients
-                ProductDefinition productIngredient = null;
-                PropertyItemDefinition mixerIngredient = null;
-                // Check if the first ingredient is the ProductDefinition
-                if (ingredient1.Item.TryCast<ProductDefinition>() is ProductDefinition subProduct1)
-                {
-                    // Case 1: ingredient1 is the ProductDefinition
-                    productIngredient = subProduct1;
-                }
-                else if (ingredient1.Item.TryCast<PropertyItemDefinition>() is PropertyItemDefinition subIngredient1)
-                {
-                    // Case 2: ingredient1 is the mixer
-                    mixerIngredient = subIngredient1;
-                }
-
-                // Check if the first ingredient is the ProductDefinition
-                if (ingredient2.Item.TryCast<ProductDefinition>() is ProductDefinition subProduct2)
-                {
-                    // Case 1: ingredient1 is the ProductDefinition
-                    productIngredient = subProduct2;
-                }
-                else if (ingredient2.Item.TryCast<PropertyItemDefinition>() is PropertyItemDefinition subIngredient2)
-                {
-                    // Case 2: ingredient1 is the mixer
-                    mixerIngredient = subIngredient2;
-                }
-
-                if (productIngredient != null && mixerIngredient != null)
-                {
-                    recipeIngredients = DeepSearchRecursiveWithMemo(productIngredient,visited);
-                    recipeIngredients.Add(mixerIngredient);
-
-                    if (ingredientsForThisProduct.Count == 0 || recipeIngredients.Count < ingredientsForThisProduct.Count)
-                    {
-                        ingredientsForThisProduct = recipeIngredients;
-                    }
-                }
-            }
-
-            PrintList(ingredientsForThisProduct, -1);
-
-            ingredientsCache[product.ID] = ingredientsForThisProduct;
-
-            return ingredientsForThisProduct;
-        }
-
-        public static void PrintList(List<PropertyItemDefinition> ingredients, int ver = 0)
-        {
-            // 1. Extract the Name from each PropertyItemDefinition using LINQ's Select.
-            // 2. Join all the resulting names into a single string using " -> " as the separator.
-            string ingredientString = string.Join(" -> ", ingredients.Select(i => i.Name));
-
-            if (ver == 0)
-            {
-                Utility.Log(ingredientString);
-
-            }
-            else if (ver == 1)
-            {
-                Utility.Success(ingredientString);
-            }
-            else
-            {
-                Utility.Error(ingredientString);
-            }
-
-        }
 
     }
 }
