@@ -56,12 +56,14 @@ namespace UnicornsCustomSeeds.CustomQuests
             }
             
             // Add quest entry: Complete objective
-            customSeedEntry = AddEntry("Give Albert 20x of a Weed Strain and $500", poiPosition: StashManager.albertsStash.transform.position);
+            customSeedEntry = AddEntry("Give Albert 20x of a Weed Mix and $500", poiPosition: StashManager.albertsStash.transform.position);
+
+            //OnComplete += (Action) HandleComplete;
         }
 
-        public void OnComplete()
+        public void HandleComplete()
         {
-
+            Utility.Log("Handle Complete");
         }
 
     }

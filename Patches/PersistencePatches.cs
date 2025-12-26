@@ -51,10 +51,6 @@ namespace UnicornsCustomSeeds.Patches
             List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
             if (Directory.Exists(saveFolderPath))
             {
-                foreach (var seed in seedsIl2cpp)
-                {
-                    Utility.Log($"{seed.seedId}");
-                }
                 string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
                 File.WriteAllText(filePath, json);
                 MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
@@ -69,42 +65,29 @@ namespace UnicornsCustomSeeds.Patches
     {
         public static void Postfix(LoadManager __instance)
         {
-            Utility.Log($"{__instance}");
-            if (__instance == null) return;
-            Utility.Log($"{__instance.LoadedGameFolderPath}");
+            if (__instance == null || string.IsNullOrEmpty(__instance.LoadedGameFolderPath)) return;
+
             try
             {
-                SeedDefinition ogkush = Registry.GetItem<SeedDefinition>("ogkushseed");
-                if (ogkush != null)
-                {
-                    Utility.Log("OG Kush Exists at Runtime");
-                }
-
                 string saveGameFolder = __instance.LoadedGameFolderPath;
                 if (string.IsNullOrEmpty(saveGameFolder))
                     return;
 
                 string filePath = Path.Combine(saveGameFolder, "DiscoveredCustomSeeds.json");
+                
                 List<UnicornSeedData> seedsIl2cpp = new List<UnicornSeedData>();
-                Utility.Log(filePath);
+
                 if (File.Exists(filePath))
                 {
                     // Load and deserialize directly into an IL2CPP array/list
                     string json = File.ReadAllText(filePath);
 
                     // Try array first
-                    seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json);
-
-                    // Fallback: some setups prefer List<string> over arrays
-                    if (seedsIl2cpp == null)
-                    {
-                        seedsIl2cpp = new List<UnicornSeedData>();
-                    }
+                    seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
 
                     MelonLogger.Msg($"Loaded {seedsIl2cpp.Count} custom seeds from DiscoveredCustomSeeds.json");
                 }
                 
-
                 foreach (UnicornSeedData seedData in seedsIl2cpp)
                 {
                     if (seedData != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
@@ -135,9 +118,11 @@ namespace UnicornsCustomSeeds.Patches
         {
             if (CustomSeedsManager.DiscoveredSeeds.TryGetValue(id, out var parts))
             {
-                Utility.Log($"[CreateWeed_Patch] Called with id={id}, name={name}, type={type}");
                 SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(parts);
-                Singleton<Registry>.Instance.Seeds.Add(newSeed);
+                if (newSeed != null)
+                {
+                    MelonLogger.Msg($"[CreateWeed_Patch] Successfully loaded seed: {newSeed.ID}");
+                }
             }
         }
     }

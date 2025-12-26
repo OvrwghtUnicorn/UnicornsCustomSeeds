@@ -1,4 +1,6 @@
-﻿using Il2CppScheduleOne.Economy;
+﻿using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Economy;
+using Il2CppScheduleOne.GameTime;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Product.Packaging;
@@ -9,9 +11,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnicornsCustomSeeds.Seeds;
 using UnityEngine;
 using UnityEngine.Events;
-using static Il2CppLiquidVolumeFX.LiquidVolume;
 
 namespace UnicornsCustomSeeds.SupplierStashes
 {
@@ -20,6 +22,7 @@ namespace UnicornsCustomSeeds.SupplierStashes
         private static Dictionary<string, List<PropertyItemDefinition>> ingredientsCache = new Dictionary<string, List<PropertyItemDefinition>>();
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
         public static SupplierStash albertsStash;
+        public static bool onClosedExecuting = false;
 
         public static void GetAlbertsStash()
         {
@@ -30,13 +33,16 @@ namespace UnicornsCustomSeeds.SupplierStashes
                 {
                     Utility.Log(stash.gameObject.name);
                     albertsStash = stash;
-                    stash.Storage.onClosed.AddListener((UnityAction)AlbertsStashClosed);
+                    stash.Storage.onClosed += (Action) AlbertsStashClosed;
                 }
             }
         }
 
         public static void AlbertsStashClosed()
         {
+            if(onClosedExecuting) return;
+            onClosedExecuting = true;
+            Utility.Log("Yeet");
             ItemSlot cashSlot = null;
             CashInstance cashInstance = null;
 
@@ -70,17 +76,10 @@ namespace UnicornsCustomSeeds.SupplierStashes
                 int quantity = weedInstance.Quantity;
                 uint packageAmount = PackageAmount(packaging);
                 uint total = (uint)(quantity * packageAmount);
-                Utility.Log($"Packaging: {packaging} | Quantity: {quantity} | Total: {total}");
                 if (cashInstance.Balance >= 500 && total >= 20)
                 {
-                    if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition)
+                    if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
-                        WeedDefinition baseStrain = GetBaseStrain(definition);
-                        if (baseStrain != null)
-                        {
-                            Utility.Log($"Base is {baseStrain.Name}");
-                        }
-
                         if(CustomSeedsManager.seedDropoff != null)
                         {
                             weedSlot.ChangeQuantity(-(20/(int)packageAmount));
@@ -89,9 +88,8 @@ namespace UnicornsCustomSeeds.SupplierStashes
                         }
                     }
                 }
-
-
             }
+            onClosedExecuting = false;
         }
 
         private static uint PackageAmount(string packaging)

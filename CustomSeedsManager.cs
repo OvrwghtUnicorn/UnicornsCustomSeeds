@@ -1,19 +1,20 @@
-﻿using Il2CppInterop.Runtime;
+﻿using Il2Cpp;
 using Il2CppScheduleOne;
-using Il2CppScheduleOne.AvatarFramework.Equipping;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
+using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
-using Il2CppScheduleOne.Persistence.Datas;
+using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.Quests;
 using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.UI.Shop;
-using Il2CppSystem.Runtime.InteropServices.ComTypes;
 using MelonLoader;
-using System;
+using Newtonsoft.Json;
+using S1API.DeadDrops;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,7 +25,6 @@ using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.SupplierStashes;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
-using UnityEngine.Playables;
 using Il2Generic = Il2CppSystem.Collections.Generic;
 
 namespace UnicornsCustomSeeds
@@ -48,6 +48,7 @@ namespace UnicornsCustomSeeds
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
+        public static string baseSeedId = "<SEEDID>_customseeddefinition";
 
         public enum BlendMode { Lerp, Multiply, Add, Screen }
         public static BlendMode blendMode = BlendMode.Lerp;
@@ -61,6 +62,7 @@ namespace UnicornsCustomSeeds
 
         public static Il2Generic.Dictionary<string, SeedDefinition> baseSeedDefinitions = new Il2Generic.Dictionary<string, SeedDefinition>();
         public static Il2Generic.Dictionary<string, ShopListing> baseShopListing = new Il2Generic.Dictionary<string, ShopListing>();
+        public delegate bool ValidityCheckDelegate(SendableMessage message, out Il2CppSystem.String invalidReason);
 
         public static void Initialize()
         {
@@ -112,18 +114,17 @@ namespace UnicornsCustomSeeds
         public static void GetAlbertHoover()
         {
             Albert albert = GameObject.FindObjectOfType<Albert>();
-            if(albert != null)
+            if (albert != null)
             {
                 Utility.Log("Found Albert Hoover");
                 MSGConversation convo = albert.MSGConversation;
-                if(convo != null)
+                if (convo != null)
                 {
                     Utility.Log("Found Alberts Conversation");
                     albertsConvo = convo;
                     MessageSenderInterface senderInterface = convo.senderInterface;
                     SendableMessage sendable = albertsConvo.CreateSendableMessage("Order Seeds");
                     sendable.onSent += (Action) OnSent;
-                    //sendable.onSelected = (Action) OnSelected;
                 }
 
             }
@@ -137,7 +138,7 @@ namespace UnicornsCustomSeeds
             albertsConvo.SendMessageChain(messageChain, 0.5f, true, true);
 
 
-            if(seedDropoff == null)
+            if (seedDropoff == null)
             {
                 Utility.Log("Quest Started");
                 seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
@@ -146,7 +147,7 @@ namespace UnicornsCustomSeeds
 
         public static void CompleteQuest(WeedDefinition weedDef)
         {
-            if(seedDropoff != null)
+            if (seedDropoff != null)
             {
                 seedDropoff.Complete();
                 seedDropoff = null;
@@ -155,22 +156,42 @@ namespace UnicornsCustomSeeds
             }
         }
 
+        public static void BroadcastCustomSeed(UnicornSeedData seed)
+        {
+            ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
+            string json = JsonConvert.SerializeObject(seed);
+            string payload = "[UNISEED]" + json;
+
+            var props = new Il2Generic.List<string>();
+            var appearance = new WeedAppearanceSettings(
+                prodManager.DefaultWeed.MainMat.color,
+                prodManager.DefaultWeed.SecondaryMat.color,
+                prodManager.DefaultWeed.LeafMat.color,
+                prodManager.DefaultWeed.StemMat.color);
+
+            prodManager.CreateWeed_Server(payload, "ogkushseed",
+                                             EDrugType.Marijuana, props, appearance);
+        }
+
         public static IEnumerator CreateSeed(float delaySeconds, WeedDefinition weedDef)
         {
             yield return new WaitForSeconds(delaySeconds);
 
-            var newSeed = factories["ogkushseed"].CreateSeedDefinition(weedDef);
+            WeedDefinition baseSeed = StashManager.GetBaseStrain(weedDef);
+
+            var newSeed = factories[baseSeed.ID].CreateSeedDefinition(weedDef);
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             float price = StashManager.GetIngredientCost(weedDef);
-            UnicornSeedData newSeedData = new UnicornSeedData { 
+            UnicornSeedData newSeedData = new UnicornSeedData
+            {
                 seedId = newSeed.ID,
                 weedId = weedDef.ID,
-                baseSeedId = "ogkushseed",
+                baseSeedId = baseSeed.ID,
                 price = price,
             };
             DiscoveredSeeds.Add(newSeed.ID, newSeedData);
-            CreateShopListing(newSeed, "ogkushseed", price);
+            CreateShopListing(newSeed, baseSeed.ID, price);
             SeedQueue.Enqueue(newSeed);
 
             // 3. You can yield return other things, like waiting for a request, 
@@ -183,7 +204,22 @@ namespace UnicornsCustomSeeds
             // --- Coroutine finishes ---
             // When the method reaches the end (or hits 'yield break'), the coroutine is complete.
             Utility.Log("Coroutine finished successfully.");
-            albertsConvo.SendMessage(new Message($"Your seed for {weedDef.name} is complete and available in the shop", Message.ESenderType.Other, true, -1), true, true);
+
+            DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
+            if (randomEmptyDrop != null)
+            {
+                ItemInstance defaultInstance = newSeed.GetDefaultInstance();
+                defaultInstance.SetQuantity(10);
+                randomEmptyDrop.Storage.InsertItem(defaultInstance, true);
+                string guidString = GUIDManager.GenerateUniqueGUID().ToString();
+                NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null, randomEmptyDrop.GUID.ToString(), guidString);
+                albertsConvo.SendMessage(new Message($"{weedDef.name} is synthesized and placed in the deaddrop", Message.ESenderType.Other, true, -1), true, true);
+            }
+            else
+            {
+                albertsConvo.SendMessage(new Message($"{weedDef.name} is synthesized and available in the shop", Message.ESenderType.Other, true, -1), true, true);
+            }
+
         }
 
         public static void OnSelected()
@@ -223,7 +259,7 @@ namespace UnicornsCustomSeeds
                 {
                     baseSeedSprite = BaseIconSprite;
                 }
-                    Shader labelGradient = AssetBundleUtils.LoadAssetFromBundle<Shader>("labelgradient.shader", "customshaders");
+                Shader labelGradient = AssetBundleUtils.LoadAssetFromBundle<Shader>("labelgradient.shader", "customshaders");
                 if (labelGradient != null)
                 {
                     customShader = labelGradient;
