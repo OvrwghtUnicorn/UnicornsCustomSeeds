@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnicornsCustomSeeds.Seeds;
+using UnicornsCustomSeeds.Managers;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -84,11 +85,13 @@ namespace UnicornsCustomSeeds.SupplierStashes
                 {
                     if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
-                        if(CustomSeedsManager.seedDropoff != null)
+                        if(SeedQuestManager.HasActiveQuest)
                         {
                             weedSlot.ChangeQuantity(-(STASH_QTY_REQUIREMENT/(int)packageAmount));
                             cashInstance.ChangeBalance(-STASH_COST_REQUIREMENT);
-                            CustomSeedsManager.CompleteQuest(definition);
+                            SeedQuestManager.CompleteQuest();
+                            SeedQuestManager.SendMessage("I will begin synthesizing the seed");
+                            CustomSeedsManager.StartSeedCreation(definition);
                         }
                     }
                 }

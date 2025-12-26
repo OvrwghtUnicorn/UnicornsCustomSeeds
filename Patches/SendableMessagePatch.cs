@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
 using System.Threading.Tasks;
+using UnicornsCustomSeeds.Managers;
 
 namespace UnicornsCustomSeeds.Patches
 {
@@ -17,7 +19,7 @@ namespace UnicornsCustomSeeds.Patches
         {
             invalidReason = String.Empty;
             if (__instance.Text != null && __instance.Text == "Order Seeds") {
-                if (CustomSeedsManager.seedDropoff != null)
+                if (SeedQuestManager.HasActiveQuest)
                 {
                     invalidReason = "Seed Synthesizing is already in progress";
                     __result = false;

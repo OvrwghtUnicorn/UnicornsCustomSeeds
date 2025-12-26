@@ -12,6 +12,7 @@ using Il2CppScheduleOne.UI.MainMenu;
 using MelonLoader;
 using Newtonsoft.Json;
 using System.Reflection;
+using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
@@ -39,26 +40,26 @@ namespace UnicornsCustomSeeds.Patches
         }
     }
 
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new Type[] { typeof(string) })]
-    public static class SaveManager_Save_Patch
-    {
-        public static bool Prefix(SaveManager __instance, string saveFolderPath)
-        {
-            if (string.IsNullOrEmpty(saveFolderPath))
-                return true;
+    //[HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new Type[] { typeof(string) })]
+    //public static class SaveManager_Save_Patch
+    //{
+    //    public static bool Prefix(SaveManager __instance, string saveFolderPath)
+    //    {
+    //        if (string.IsNullOrEmpty(saveFolderPath))
+    //            return true;
 
-            string filePath = Path.Combine(saveFolderPath, "DiscoveredCustomSeeds.json");
-            List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
-            if (Directory.Exists(saveFolderPath))
-            {
-                string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
-                File.WriteAllText(filePath, json);
-                MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
-            }
+    //        string filePath = Path.Combine(saveFolderPath, "DiscoveredCustomSeeds.json");
+    //        List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
+    //        if (Directory.Exists(saveFolderPath))
+    //        {
+    //            string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
+    //            File.WriteAllText(filePath, json);
+    //            MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
+    //        }
 
-            return true;
-        }
-    }
+    //        return true;
+    //    }
+    //}
 
     [HarmonyPatch(typeof(LoadManager), nameof(LoadManager.StartGame))]
     public static class LoadManager_StartGame_Patch

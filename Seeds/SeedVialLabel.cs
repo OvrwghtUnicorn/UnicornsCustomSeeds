@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using UnityEngine;
 using MelonLoader;
 using Il2CppScheduleOne.Product;
+using UnicornsCustomSeeds.Managers;
 
-namespace UnicornsCustomSeeds
+namespace UnicornsCustomSeeds.Seeds
 {
     [RegisterTypeInIl2Cpp]
     public class SeedVialLabel : MonoBehaviour
@@ -40,10 +41,10 @@ namespace UnicornsCustomSeeds
             var meshFilter = GetComponent<MeshFilter>();
             if (meshFilter != null)
             {
-                string id = this.name.Split(':')[1];
+                string id = name.Split(':')[1];
                 
                 WeedAppearanceSettings appearance;
-                CustomSeedsManager.appearanceMap.TryGetValue(id,out appearance);
+                SeedVisualsManager.appearanceMap.TryGetValue(id,out appearance);
                 if (appearance != null) {
                     colorA = appearance.MainColor;
                     colorB = appearance.SecondaryColor;

@@ -11,9 +11,11 @@ using MelonLoader;
 using MelonLoader.Utils;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-namespace UnicornsCustomSeeds
+using UnityEngine.Rendering;
+using UnicornsCustomSeeds.Managers;
+
+namespace UnicornsCustomSeeds.Seeds
 {
 
     public class SeedFactory
@@ -85,16 +87,16 @@ namespace UnicornsCustomSeeds
             {
                 labelTransform.localScale = new Vector3(1.05f, 1.05f, 2);
                 labelTransform.position = new Vector3(0, -0.05f, 0);
-                if(CustomSeedsManager.customMat == null)
+                if(SeedVisualsManager.customMat == null)
                 {
-                    CustomSeedsManager.LoadSeedMaterial();
+                    SeedVisualsManager.LoadSeedMaterial();
                 }
 
-                if (CustomSeedsManager.customMat != null)
+                if (SeedVisualsManager.customMat != null)
                 {
                     var rend = labelTransform.GetComponent<Renderer>();
                     // Create an instance of the material instead of using shared
-                    rend.material = CustomSeedsManager.customMat;
+                    rend.material = SeedVisualsManager.customMat;
                     labelTransform.gameObject.AddComponent<SeedVialLabel>();
                     labelTransform.name = labelTransform.name + ":" + seedDefId;
                     //var meshFilter = labelTransform.GetComponent<MeshFilter>();
@@ -119,7 +121,7 @@ namespace UnicornsCustomSeeds
         public WeedPlant ClonePlantPrefab(WeedDefinition newDef)
         {
             if (basePlantPrefab == null) throw new InvalidOperationException("Base plant prefab not initialized.");
-            WeedPlant newPlant = GameObject.Instantiate(basePlantPrefab, rootGameObject);
+            WeedPlant newPlant = UnityEngine.Object.Instantiate(basePlantPrefab, rootGameObject);
             SetPlantAppearance(newDef, newPlant);
             PlantHarvestable newHarvestable = CloneBranchPrefab(newDef);
             SetBranchAppearance(newHarvestable.transform, newDef);
@@ -255,7 +257,7 @@ namespace UnicornsCustomSeeds
         public PlantHarvestable CloneBranchPrefab(WeedDefinition newDef)
         {
             if (baseBranchPrefab == null) throw new InvalidOperationException("Base branch prefab not initialized.");
-            PlantHarvestable cloneHarvestable = GameObject.Instantiate(baseBranchPrefab, rootGameObject);
+            PlantHarvestable cloneHarvestable = UnityEngine.Object.Instantiate(baseBranchPrefab, rootGameObject);
             cloneHarvestable.gameObject.name = $"{newDef.ID}_Harvestable";
             cloneHarvestable.gameObject.layer = baseBranchPrefab.gameObject.layer;
             cloneHarvestable.Product = newDef;
@@ -265,7 +267,7 @@ namespace UnicornsCustomSeeds
         public FunctionalSeed CloneFunctionalSeedPrefab(string seedDefId)
         {
             if (baseFunctionalSeedPrefab == null) throw new InvalidOperationException("Base functional seed prefab not initialized.");
-            FunctionalSeed newSeed = GameObject.Instantiate(baseFunctionalSeedPrefab, rootGameObject);
+            FunctionalSeed newSeed = UnityEngine.Object.Instantiate(baseFunctionalSeedPrefab, rootGameObject);
             GrowLabel(newSeed.transform, seedDefId);
             return newSeed;
         }
@@ -274,7 +276,7 @@ namespace UnicornsCustomSeeds
         public Equippable_Seed CloneEquippableSeedPrefab(SeedDefinition newDef, WeedAppearanceSettings weedAppearance)
         {
             if (baseEquippableSeedPrefab == null) throw new InvalidOperationException("Base equippable seed prefab not initialized.");
-            Equippable_Seed newEquipSeed = GameObject.Instantiate(baseEquippableSeedPrefab, rootGameObject);
+            Equippable_Seed newEquipSeed = UnityEngine.Object.Instantiate(baseEquippableSeedPrefab, rootGameObject);
             GrowLabel(newEquipSeed.transform, newDef.ID); // Pass the ID
             newEquipSeed.gameObject.name = $"{newDef.ID}_Equippable";
             newEquipSeed.gameObject.layer = baseEquippableSeedPrefab.gameObject.layer;
@@ -288,7 +290,7 @@ namespace UnicornsCustomSeeds
         public AvatarEquippable CloneAvatarEquippablePrefab(string newDefId)
         {
             if (baseAvatarEquippablePrefab == null) throw new InvalidOperationException("Base avatar equippable prefab not initialized.");
-            AvatarEquippable newAvatarEquip = GameObject.Instantiate(baseAvatarEquippablePrefab, rootGameObject);
+            AvatarEquippable newAvatarEquip = UnityEngine.Object.Instantiate(baseAvatarEquippablePrefab, rootGameObject);
             GrowLabel (newAvatarEquip.transform, newDefId);
             return newAvatarEquip;
         }
@@ -296,7 +298,7 @@ namespace UnicornsCustomSeeds
         public StoredItem CloneStoredItem(string newDefId)
         {
             if (baseStorableItem == null) throw new InvalidOperationException("Base Stored Item not initialized.");
-            StoredItem newStoredItem = GameObject.Instantiate(baseStorableItem, rootGameObject);
+            StoredItem newStoredItem = UnityEngine.Object.Instantiate(baseStorableItem, rootGameObject);
             GrowLabel(newStoredItem.transform, newDefId);
             return newStoredItem;
         }
@@ -306,7 +308,7 @@ namespace UnicornsCustomSeeds
             if (baseSeedDefinition == null) throw new InvalidOperationException("Base seed definition not initialized.");
 
             // Clone the SeedDefinition ScriptableObject
-            SeedDefinition newSeedDef = ScriptableObject.Instantiate(baseSeedDefinition);
+            SeedDefinition newSeedDef = UnityEngine.Object.Instantiate(baseSeedDefinition);
 
             WeedAppearanceSettings weedAppearance = weedDef.appearance;
             if (weedAppearance == null)
@@ -327,18 +329,18 @@ namespace UnicornsCustomSeeds
             newSeedDef.FunctionSeedPrefab.name = $"{weedDef.ID}Seed_Functional";
             newSeedDef.StoredItem = CloneStoredItem(newSeedDef.ID);
 
-            CustomSeedsManager.appearanceMap.Add(newSeedDef.ID, weedAppearance);
+            SeedVisualsManager.appearanceMap.Add(newSeedDef.ID, weedAppearance);
 
-            if (CustomSeedsManager.baseSeedSprite != null) {
+            if (SeedVisualsManager.baseSeedSprite != null) {
                 try
                 {
-                    Sprite newIcon = CustomSeedsManager.GenerateSpriteWithGradient(weedAppearance.MainColor, weedAppearance.SecondaryColor);
+                    Sprite newIcon = SeedVisualsManager.GenerateSpriteWithGradient(weedAppearance.MainColor, weedAppearance.SecondaryColor);
                     newIcon.name = newSeedDef.name + "_icon";
-                    CustomSeedsManager.seedIcons.Add(newSeedDef.ID, newIcon);
+                    SeedVisualsManager.seedIcons.Add(newSeedDef.ID, newIcon);
                     newSeedDef.Icon = newIcon;
                 }
                 catch (Exception e) {
-                    newSeedDef.Icon = CustomSeedsManager.baseSeedSprite;
+                    newSeedDef.Icon = SeedVisualsManager.baseSeedSprite;
                     Utility.PrintException(e);
                 }
 
