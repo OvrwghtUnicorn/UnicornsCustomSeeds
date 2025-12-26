@@ -1,0 +1,129 @@
+﻿using HarmonyLib;
+using Il2CppFishNet;
+using Il2CppFishNet.Connection;
+using Il2CppScheduleOne;
+using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Growing;
+using Il2CppScheduleOne.Product;
+using MelonLoader;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnicornsCustomSeeds.Seeds;
+
+namespace UnicornsCustomSeeds.Patches
+{
+    namespace UnicornsCustomSeeds.Patches
+    {
+        // ============================
+        // SERVER → CLIENT SEND TEST
+        // ============================
+        [HarmonyPatch(typeof(ProductManager), nameof(ProductManager.OnSpawnServer))]
+        public static class ProductManager_OnSpawnServer_NetTest
+        {
+            public static void Postfix(ProductManager __instance, NetworkConnection connection)
+            {
+                if (connection == null)
+                    return;
+
+                if (!InstanceFinder.IsServer)
+                    return;
+
+                if (connection.IsHost)
+                    return;
+
+                Utility.Log(
+                    "[NET-TEST][SERVER] OnSpawnServer → sending test packet to clientId=" +
+                    connection.ClientId);
+
+                var props = new Il2CppSystem.Collections.Generic.List<string>();
+                var appearance = new WeedAppearanceSettings(
+                    __instance.DefaultWeed.MainMat.color,
+                    __instance.DefaultWeed.SecondaryMat.color,
+                    __instance.DefaultWeed.LeafMat.color,
+                    __instance.DefaultWeed.StemMat.color);
+
+                __instance.CreateWeed_Server(
+                    "[NET-TEST]HELLO_FROM_SERVER",
+                    "ogkushseed",
+                    EDrugType.Marijuana,
+                    props,
+                    appearance);
+            }
+        }
+
+        // ============================
+        // CLIENT/SERVER RECEIVE TEST
+        // ============================
+        [HarmonyPatch(typeof(ProductManager), "RpcLogic___CreateWeed_1777266891")]
+        public static class ProductManager_RpcLogic_CreateWeed_NetTest
+        {
+            public static void Postfix(
+                ProductManager __instance,
+                NetworkConnection conn,
+                string name,
+                string id,
+                EDrugType type,
+                List<string> properties,
+                WeedAppearanceSettings appearance)
+            {
+                if (id != "ogkushseed")
+                    return;
+
+                if (name == null)
+                    return;
+
+                if (!name.StartsWith("[NET-TEST]"))
+                    return;
+
+                bool isServer = InstanceFinder.IsServer;
+                bool isClient = InstanceFinder.IsClient;
+
+                string side =
+                    isServer && isClient ? "HOST" :
+                    isServer ? "SERVER" :
+                    isClient ? "CLIENT" : "UNKNOWN";
+
+                Utility.Log(
+                    "[NET-TEST][" + side + "] RpcLogic___CreateWeed received → " +
+                    "conn=" + (conn != null ? conn.ClientId.ToString() : "null") +
+                    " payload=" + name);
+            }
+        }
+
+        // ============================
+        // OPTIONAL: CLIENT → SERVER TEST
+        // ============================
+        public static class NetworkTestSender
+        {
+            public static void SendClientTestPacket()
+            {
+                if (!InstanceFinder.IsClient)
+                    return;
+
+                ProductManager pm = NetworkSingleton<ProductManager>.Instance;
+                if (pm == null)
+                    return;
+
+                Utility.Log("[NET-TEST][CLIENT] Sending test packet to server");
+
+                var props = new Il2CppSystem.Collections.Generic.List<string>();
+                var appearance = new WeedAppearanceSettings(
+                    pm.DefaultWeed.MainMat.color,
+                    pm.DefaultWeed.SecondaryMat.color,
+                    pm.DefaultWeed.LeafMat.color,
+                    pm.DefaultWeed.StemMat.color);
+
+                pm.CreateWeed_Server(
+                    "[NET-TEST]HELLO_FROM_CLIENT",
+                    "ogkushseed",
+                    EDrugType.Marijuana,
+                    props,
+                    appearance);
+            }
+        }
+    }
+}

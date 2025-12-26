@@ -42,7 +42,6 @@ namespace UnicornsCustomSeeds.SupplierStashes
         {
             if(onClosedExecuting) return;
             onClosedExecuting = true;
-            Utility.Log("Yeet");
             ItemSlot cashSlot = null;
             CashInstance cashInstance = null;
 
@@ -72,13 +71,14 @@ namespace UnicornsCustomSeeds.SupplierStashes
 
             if (cashInstance != null && weedInstance != null)
             {
+                Utility.Log($"Weed: {weedInstance.ID}");
                 string packaging = weedInstance.AppliedPackaging?.Name;
                 int quantity = weedInstance.Quantity;
                 uint packageAmount = PackageAmount(packaging);
                 uint total = (uint)(quantity * packageAmount);
                 if (cashInstance.Balance >= 500 && total >= 20)
                 {
-                    if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
+                    if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
                         if(CustomSeedsManager.seedDropoff != null)
                         {

@@ -40,7 +40,7 @@
 		<Compile Include="CustomQuests\CustomSeedQuest.cs" />
 		<Compile Include="CustomQuests\CustomSeedQuestData.cs" />
 		<Compile Include="Patches\AddRecipePatch.cs" />
-		<Compile Include="Patches\NetworkingPatches.cs" />
+		<!--<Compile Include="Patches\NetworkingPatches.cs.bak" />-->
 		<Compile Include="Patches\SendableMessagePatch.cs" />
 		<Compile Include="Seeds\UnicornSeedData.cs" />
 		<Compile Include="SupplierStashes\SupplierStashHandler.cs" />
@@ -66,7 +66,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="S1API.Forked" Version="2.6.5" />
+		<PackageReference Include="S1API.Forked" Version="2.8.5" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->

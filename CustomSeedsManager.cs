@@ -179,7 +179,7 @@ namespace UnicornsCustomSeeds
 
             WeedDefinition baseSeed = StashManager.GetBaseStrain(weedDef);
 
-            var newSeed = factories[baseSeed.ID].CreateSeedDefinition(weedDef);
+            var newSeed = factories["ogkushseed"].CreateSeedDefinition(weedDef);
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             float price = StashManager.GetIngredientCost(weedDef);
@@ -187,11 +187,11 @@ namespace UnicornsCustomSeeds
             {
                 seedId = newSeed.ID,
                 weedId = weedDef.ID,
-                baseSeedId = baseSeed.ID,
+                baseSeedId = "ogkushseed",
                 price = price,
             };
             DiscoveredSeeds.Add(newSeed.ID, newSeedData);
-            CreateShopListing(newSeed, baseSeed.ID, price);
+            CreateShopListing(newSeed, "ogkushseed", price);
             SeedQueue.Enqueue(newSeed);
 
             // 3. You can yield return other things, like waiting for a request, 
