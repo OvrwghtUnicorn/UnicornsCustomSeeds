@@ -4,9 +4,10 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
-using UnicornsCustomSeeds.SupplierStashes;
 using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.Messaging;
+using UnicornsCustomSeeds.Managers;
+
 
 
 #if IL2CPP
@@ -15,7 +16,7 @@ using Il2CppScheduleOne.Product;
 using ScheduleOne.Product;
 #endif
 
-namespace UnicornsCustomSeeds.CustomQuests
+namespace UnicornsCustomSeeds.SeedQuests
 {
     /// <summary>
     /// Custom Quest: Drop off the Mix

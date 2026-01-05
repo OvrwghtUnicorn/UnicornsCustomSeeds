@@ -12,11 +12,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnicornsCustomSeeds.Seeds;
-using UnicornsCustomSeeds.Managers;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace UnicornsCustomSeeds.SupplierStashes
+using MelonLoader;
+
+namespace UnicornsCustomSeeds.Managers
 {
     public static class StashManager
     {
@@ -26,12 +27,21 @@ namespace UnicornsCustomSeeds.SupplierStashes
         public static bool onClosedExecuting = false;
         
         // Constants for Albert's Stash requirements
-        public const int STASH_COST_REQUIREMENT = 500;
-        public const int STASH_QTY_REQUIREMENT = 20;
+        // Constants for Albert's Stash requirements
+        private static MelonPreferences_Category ConfigCategory;
+        private static MelonPreferences_Entry<int> StashCostEntry;
+        private static MelonPreferences_Entry<int> StashQtyEntry;
+
+        public static void InitializeConfig()
+        {
+            ConfigCategory = MelonPreferences.CreateCategory("UnicornsCustomSeeds");
+            StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement");
+            StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement");
+        }
 
         public static void GetAlbertsStash()
         {
-            var temp = GameObject.FindObjectsOfType<SupplierStash>();
+            var temp = UnityEngine.Object.FindObjectsOfType<SupplierStash>();
             foreach (SupplierStash stash in temp)
             {
                 if (stash != null && stash.gameObject.name.ToLower().Contains("albert"))
@@ -81,14 +91,14 @@ namespace UnicornsCustomSeeds.SupplierStashes
                 int quantity = weedInstance.Quantity;
                 uint packageAmount = PackageAmount(packaging);
                 uint total = (uint)(quantity * packageAmount);
-                if (cashInstance.Balance >= STASH_COST_REQUIREMENT && total >= STASH_QTY_REQUIREMENT)
+                if (cashInstance.Balance >= StashCostEntry.Value && total >= StashQtyEntry.Value)
                 {
                     if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
                         if(SeedQuestManager.HasActiveQuest)
                         {
-                            weedSlot.ChangeQuantity(-(STASH_QTY_REQUIREMENT/(int)packageAmount));
-                            cashInstance.ChangeBalance(-STASH_COST_REQUIREMENT);
+                            weedSlot.ChangeQuantity(-(StashQtyEntry.Value/(int)packageAmount));
+                            cashInstance.ChangeBalance(-StashCostEntry.Value);
                             SeedQuestManager.CompleteQuest();
                             SeedQuestManager.SendMessage("I will begin synthesizing the seed");
                             CustomSeedsManager.StartSeedCreation(definition);

@@ -3,7 +3,6 @@ using MelonLoader;
 using UnityEngine.Events;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
-using UnicornsCustomSeeds.SupplierStashes;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.UI.Management;
@@ -48,14 +47,9 @@ namespace UnicornsCustomSeeds
     public class Core : MelonMod {
 
         public override void OnLateInitializeMelon() {
+            StashManager.InitializeConfig();
             LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
             SaveManager.Instance.onSaveComplete.AddListener((UnityAction)SaveData);
-            //Il2CppAssetBundle ab = AssetBundleUtils.LoadAssetBundle("customshaders");
-            //var assets = ab.AllAssetNames();
-            //foreach (string name in assets)
-            //{
-            //    Utility.Log(name);
-            //}
         }
 
         public void SaveData()
@@ -88,122 +82,22 @@ namespace UnicornsCustomSeeds
         {
             CustomSeedsManager.Initialize();
             StashManager.GetAlbertsStash();
-
-            //GameObject temp = GameObject.Find("Player_Local");
-            //if(temp != null)
-            //{
-            //    var mgmtCanvas = temp.transform.Find("CameraContainer/Camera/OverlayCamera/ManagementClipboard/Clipboard/ManagementCanvas");
-            //    if (mgmtCanvas != null) {
-            //        Utility.Success("Canvas GO");
-            //        ManagementInterface managementInterface = mgmtCanvas.GetComponent<ManagementInterface>();
-            //        if (managementInterface != null)
-            //        {
-            //            Utility.Success("Found Screen");
-            //            foreach (var panel in managementInterface.ConfigPanelPrefabs)
-            //            {
-            //                Utility.Success(panel.Panel.name);
-            //                if (panel.Panel.TryCast<PotConfigPanel>() is PotConfigPanel potSelector)
-            //                {
-            //                    ItemFieldUI seedUI = potSelector.SeedUI;
-            //                    if (seedUI != null)
-            //                    {
-            //                        Utility.Success("Found SeedUI");
-            //                        if(seedUI.Fields.Count > 0)
-            //                        {
-            //                            Utility.Success("Fields Are Good");
-            //                            foreach (ItemDefinition itemDefinition in seedUI.Fields[0].Options)
-            //                            {
-            //                                Utility.Log(itemDefinition.Name);
-            //                            }
-
-                                        
-            //                            foreach (var seed in CustomSeedsManager.DiscoveredSeeds)
-            //                            {
-            //                                SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.seedId);
-            //                                if (customDef != null)
-            //                                {
-            //                                    seedUI.Fields[0].Options.Add(customDef);
-            //                                }
-
-            //                            }
-            //                        } else
-            //                        {
-            //                            Utility.Success("Fields Are not Good");
-            //                        }
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //    /*
-            //     ManagementInterface temp = Singleton<ManagementInterface>.Instance;
-            //if (temp != null) {
-            //    Utility.Success("Found Screen");
-            //    foreach(var panel in temp.ConfigPanelPrefabs)
-            //    {
-            //        Utility.Success(panel.Panel.name);
-            //        if(panel.Panel.TryCast<PotConfigPanel>() is PotConfigPanel potSelector){
-            //            ItemFieldUI seedUI = potSelector.SeedUI;
-            //            if (seedUI != null) {
-            //                Utility.Success("Found SeedUI");
-            //                foreach (ItemDefinition itemDefinition in seedUI.Fields[0].Options)
-            //                {
-            //                    Utility.Log(itemDefinition.Name);
-            //                }
-
-            //                foreach(var seed in CustomSeedsManager.DiscoveredSeeds)
-            //                {
-            //                    SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.seedId);
-            //                    if (customDef != null)
-            //                    {
-            //                        seedUI.Fields[0].Options.Add(customDef);
-            //                    }
-                                
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-            //     */
-
-            //}
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
         {
-
-            if (sceneName.ToLower() == "main")
+            var baseSeed = Registry.GetItem<SeedDefinition>("ogkushseed");
+            if (CustomSeedsManager.factory == null && baseSeed != null)
             {
-                // Temp
-            } else
+                Utility.Log("Initializing Factory");
+                CustomSeedsManager.factory = new SeedFactory(baseSeed);
+            }
+            // When returning to the main scene clear all data structures to prevent overlap with other saves
+            if (sceneName.ToLower() != "main")
             {
                 CustomSeedsManager.ClearAll();
             }
         }
-
-        //[HarmonyPatch(typeof(Pot))]
-        //[HarmonyPatch(nameof(Pot.InitializeGridItem))]
-        //public static class Pot_InitializeGridItem_Patch
-        //{
-        //    // Prefix runs BEFORE the game’s PotConfiguration.InitializeGridItem
-        //    public static bool Prefix(
-        //        Pot __instance,
-        //        ItemInstance instance,
-        //        Grid grid,
-        //        Vector2 originCoordinate,
-        //        int rotation,
-        //        string GUID
-        //    )
-        //    {
-        //        // Example: ensure Seed.Options contains your custom seeds
-        //        if (__instance == null)
-        //            return true;
-
-        //        Utility.Error("Initialize POTTTTTT");
-
-        //        return true;
-        //    }
-        //}
 
         [HarmonyPatch(typeof(ItemFieldUI), nameof(ItemFieldUI.Clicked))]
         public static class ItemFieldUI_Clicked_Patch

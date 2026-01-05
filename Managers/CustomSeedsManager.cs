@@ -16,14 +16,7 @@ using MelonLoader;
 using Newtonsoft.Json;
 using S1API.DeadDrops;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnicornsCustomSeeds.CustomQuests;
 using UnicornsCustomSeeds.Seeds;
-using UnicornsCustomSeeds.SupplierStashes;
-using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
 using Il2Generic = Il2CppSystem.Collections.Generic;
 
@@ -39,8 +32,10 @@ namespace UnicornsCustomSeeds.Managers
     public static class CustomSeedsManager
     {
         public const string BASE_SEED_ID = "ogkushseed";
+        
+        // Commit ID where this was working: 371da19bae50ee14c40430cf9e333c01f93262e1
         public static Queue<SeedDefinition> SeedQueue = new Queue<SeedDefinition>();
-        public static Dictionary<string, SeedFactory> factories = new();
+        public static SeedFactory factory;
         public static Dictionary<string, UnicornSeedData> DiscoveredSeeds = new();
 
         public static ShopInterface Shop = null;
@@ -50,9 +45,10 @@ namespace UnicornsCustomSeeds.Managers
         public static Il2Generic.Dictionary<string, ShopListing> baseShopListing = new Il2Generic.Dictionary<string, ShopListing>();
         public delegate bool ValidityCheckDelegate(SendableMessage message, out Il2CppSystem.String invalidReason);
 
+        public static bool FirstLoad = false;
         public static void Initialize()
         {
-            var shopInterfaces = UnityEngine.Object.FindObjectsOfType<ShopInterface>();
+                var shopInterfaces = UnityEngine.Object.FindObjectsOfType<ShopInterface>();
             foreach (ShopInterface shopInterface in shopInterfaces)
             {
                 if (shopInterface.gameObject.name == "WeedSupplierInterface")
@@ -69,7 +65,9 @@ namespace UnicornsCustomSeeds.Managers
                 return;
             }
 
-            SeedQuestManager.GetAlbertHoover();
+            ConversationManager.Init();
+            SeedQuestManager.Init();
+
             SeedVisualsManager.LoadSeedMaterial();
 
             InitDictionary();
@@ -96,6 +94,9 @@ namespace UnicornsCustomSeeds.Managers
             SeedVisualsManager.appearanceMap.Clear();
             DiscoveredSeeds.Clear();
             SeedQueue.Clear();
+            //factories.Clear();
+            //baseSeedDefinitions.Clear();
+            //baseShopListing.Clear();
         }
 
         public static void StartSeedCreation(WeedDefinition weedDef)
@@ -124,8 +125,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             yield return new WaitForSeconds(delaySeconds);
 
-            WeedDefinition baseSeed = StashManager.GetBaseStrain(weedDef);
-            var newSeed = factories[BASE_SEED_ID].CreateSeedDefinition(weedDef);
+            var newSeed = factory.CreateSeedDefinition(weedDef);
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             float price = StashManager.GetIngredientCost(weedDef);
@@ -207,25 +207,14 @@ namespace UnicornsCustomSeeds.Managers
         {
             SeedDefinition newSeed = null;
             WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(newSeedData.weedId);
-            SeedDefinition seedDef = Registry.GetItem<SeedDefinition>(newSeedData.baseSeedId);
 
-            if (seedDef != null && weedDef != null)
+            if (weedDef != null)
             {
-                SeedFactory baseFactory;
-                if (factories.ContainsKey(newSeedData.baseSeedId))
-                {
-                    baseFactory = factories[newSeedData.baseSeedId];
-                }
-                else
-                {
-                    baseFactory = new SeedFactory(seedDef);
-                    factories.Add(newSeedData.baseSeedId, baseFactory);
-                }
 
-                newSeed = baseFactory.CreateSeedDefinition(weedDef);
+                newSeed = factory.CreateSeedDefinition(weedDef);
                 if (newSeed == null)
                 {
-                    Utility.Log("Manager New Seed is null?");
+                    Utility.Log("New Seed returned null?");
                 }
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
                 //DiscoveredSeeds.Add(newSeed.ID, newSeedData);

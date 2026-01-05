@@ -18,7 +18,8 @@ namespace UnicornsCustomSeeds.Patches
         public static bool Prefix(SendableMessage __instance, ref bool __result, out string invalidReason)
         {
             invalidReason = String.Empty;
-            if (__instance.Text != null && __instance.Text == "Order Seeds") {
+
+            if (__instance.Text != null && __instance.Text == SeedQuestManager.messageId) {
                 if (SeedQuestManager.HasActiveQuest)
                 {
                     invalidReason = "Seed Synthesizing is already in progress";
@@ -27,7 +28,11 @@ namespace UnicornsCustomSeeds.Patches
                 {
                     invalidReason = "No deaddrops are available";
                     __result = false;
-                } else
+                } else if (ConversationManager.albert.RelationData.RelationDelta < 4f)
+                {
+                    invalidReason = "Relationship isn't good enough";
+                    __result = false;
+                } else 
                 {
                     __result = true;
                 }

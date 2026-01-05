@@ -27,7 +27,7 @@ namespace UnicornsCustomSeeds.Seeds
         private Equippable_Seed baseEquippableSeedPrefab;
         private AvatarEquippable baseAvatarEquippablePrefab;
         private StoredItem baseStorableItem;
-        private SeedDefinition baseSeedDefinition;
+        public SeedDefinition baseSeedDefinition;
 
         public SeedFactory(SeedDefinition seedDefinition)
         {

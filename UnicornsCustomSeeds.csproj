@@ -37,20 +37,20 @@
 
 	<ItemGroup>
 		<Compile Include="Core.cs" />
-		<Compile Include="CustomQuests\CustomSeedQuest.cs" />
-		<Compile Include="CustomQuests\CustomSeedQuestData.cs" />
+		<Compile Include="Managers\ConversationManager.cs" />
+		<Compile Include="SeedQuests\CustomSeedQuest.cs" />
+		<Compile Include="SeedQuests\CustomSeedQuestData.cs" />
 		<Compile Include="Managers\SeedQuestManager.cs" />
 		<Compile Include="Managers\SeedVisualsManager.cs" />
 		<Compile Include="Patches\AddRecipePatch.cs" />
 		<!--<Compile Include="Patches\NetworkingPatches.cs.bak" />-->
 		<Compile Include="Patches\SendableMessagePatch.cs" />
 		<Compile Include="Seeds\UnicornSeedData.cs" />
-		<Compile Include="SupplierStashes\SupplierStashHandler.cs" />
 		<Compile Include="Managers\CustomSeedsManager.cs" />
 		<Compile Include="Patches\PersistencePatches.cs" />
 		<Compile Include="Seeds\SeedFactory.cs" />
 		<Compile Include="Seeds\SeedVialLabel.cs" />
-		<Compile Include="SupplierStashes\StashManager.cs" />
+		<Compile Include="Managers\StashManager.cs" />
 		<Compile Include="TemplateUtils\AssetBundleUtils.cs" />
 		<Compile Include="TemplateUtils\SeedIconGenerator.cs" />
 		<Compile Include="TemplateUtils\PrefabDebugger.cs" />

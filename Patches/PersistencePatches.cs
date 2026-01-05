@@ -4,6 +4,7 @@ using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.Persistence.ItemLoaders;
@@ -26,7 +27,7 @@ namespace UnicornsCustomSeeds.Patches
     {
         public static void Postfix(LoadManager __instance, SaveInfo autoLoadSave, MainMenuPopup.Data mainMenuPopup, bool preventLeaveLobby)
         {
-            var seedList = Singleton<Registry>.Instance.Seeds;
+            var seedList = Singleton<ManagementUtilities>.Instance.Seeds;
             var seedListClean = new Il2CppGeneric.List<SeedDefinition>();
             foreach (var seed in seedList)
             {
@@ -36,30 +37,9 @@ namespace UnicornsCustomSeeds.Patches
                 }
             }
 
-            Singleton<Registry>.Instance.Seeds = seedListClean;
+            Singleton<ManagementUtilities>.Instance.Seeds = seedListClean;
         }
     }
-
-    //[HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new Type[] { typeof(string) })]
-    //public static class SaveManager_Save_Patch
-    //{
-    //    public static bool Prefix(SaveManager __instance, string saveFolderPath)
-    //    {
-    //        if (string.IsNullOrEmpty(saveFolderPath))
-    //            return true;
-
-    //        string filePath = Path.Combine(saveFolderPath, "DiscoveredCustomSeeds.json");
-    //        List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
-    //        if (Directory.Exists(saveFolderPath))
-    //        {
-    //            string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
-    //            File.WriteAllText(filePath, json);
-    //            MelonLogger.Msg("Created default DiscoveredCustomSeeds.json with initial custom seeds.");
-    //        }
-
-    //        return true;
-    //    }
-    //}
 
     [HarmonyPatch(typeof(LoadManager), nameof(LoadManager.StartGame))]
     public static class LoadManager_StartGame_Patch
@@ -80,17 +60,31 @@ namespace UnicornsCustomSeeds.Patches
 
                 if (File.Exists(filePath))
                 {
+                    CustomSeedsManager.FirstLoad = false;
                     // Load and deserialize directly into an IL2CPP array/list
                     string json = File.ReadAllText(filePath);
-
+                    Utility.Error(filePath);
                     // Try array first
-                    seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
-
-                    MelonLogger.Msg($"Loaded {seedsIl2cpp.Count} custom seeds from DiscoveredCustomSeeds.json");
+                    try
+                    {
+                        seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
+                        Utility.Success($"Successfully loaded {seedsIl2cpp.Count} custom seeds");
+                    }
+                    catch (Exception ex)
+                    {
+                        Utility.PrintException(ex);
+                        CustomSeedsManager.FirstLoad = true;
+                        seedsIl2cpp = new List<UnicornSeedData>();
+                    }
                 }
-                
+                else
+                {
+                    CustomSeedsManager.FirstLoad = true;
+                }
+
                 foreach (UnicornSeedData seedData in seedsIl2cpp)
                 {
+                    var weedInstance = Singleton<Registry>.Instance._GetItem(seedData.weedId);
                     if (seedData != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
                     {
                         CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);

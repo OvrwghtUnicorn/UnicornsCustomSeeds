@@ -1,7 +1,7 @@
 ﻿using System;
 using S1API.Quests;
 
-namespace UnicornsCustomSeeds.CustomQuests
+namespace UnicornsCustomSeeds.SeedQuests
 {
     /// <summary>
     /// Data class for CustomSeedQuest to store persistent data

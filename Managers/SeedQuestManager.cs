@@ -6,7 +6,8 @@ using Il2CppScheduleOne.UI.Phone.Messages;
 using MelonLoader;
 using S1API.Quests;
 using System;
-using UnicornsCustomSeeds.CustomQuests;
+using System.Collections.Generic;
+using UnicornsCustomSeeds.SeedQuests;
 using UnityEngine;
 
 namespace UnicornsCustomSeeds.Managers
@@ -14,33 +15,26 @@ namespace UnicornsCustomSeeds.Managers
     public static class SeedQuestManager
     {
         public static CustomSeedQuest seedDropoff;
-        public static MSGConversation albertsConvo;
+
+        public static string messageId = "Synthesize Seeds";
         public static bool HasActiveQuest => seedDropoff != null;
 
-        public static void GetAlbertHoover()
+        public static void Init()
         {
-            Albert albert = GameObject.FindObjectOfType<Albert>();
-            if (albert != null)
-            {
-                Utility.Log("Found Albert Hoover");
-                MSGConversation convo = albert.MSGConversation;
-                if (convo != null)
-                {
-                    Utility.Log("Found Alberts Conversation");
-                    albertsConvo = convo;
-                    MessageSenderInterface senderInterface = convo.senderInterface;
-                    SendableMessage sendable = albertsConvo.CreateSendableMessage("Order Seeds");
-                    sendable.onSent += (Action)OnSent;
-                }
-            }
+             MSGConversation convo = ConversationManager.GetConversation("Albert");
+             if (convo != null)
+             {
+                 MessageSenderInterface senderInterface = convo.senderInterface;
+                 SendableMessage sendable = convo.CreateSendableMessage(messageId);
+                 sendable.onSent += (Action)OnSent;
+             }
         }
 
         public static void OnSent()
         {
-            MessageChain messageChain = new MessageChain();
-            messageChain.Messages.Add("Drop the weed mix and cash in my drop box.");
-            messageChain.id = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-            albertsConvo.SendMessageChain(messageChain, 0.5f, true, true);
+            List<string> messages = new List<string>();
+            messages.Add("Drop the weed mix and cash in my drop box.");
+            ConversationManager.SendMessageChain("Albert", messages);
 
             if (seedDropoff == null)
             {
@@ -60,17 +54,15 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void SendMessage(string text)
         {
-             if (albertsConvo != null)
-             {
-                 albertsConvo.SendMessage(new Message(text, Message.ESenderType.Other, true, -1), true, true);
-             }
+             ConversationManager.SendMessage("Albert", text);
         }
 
         public static void OnSelected()
         {
-             if (albertsConvo != null)
+             MSGConversation convo = ConversationManager.GetConversation("Albert");
+             if (convo != null)
              {
-                 albertsConvo.senderInterface.SetVisibility(MessageSenderInterface.EVisibility.Docked);
+                 convo.senderInterface.SetVisibility(MessageSenderInterface.EVisibility.Docked);
              }
         }
     }
