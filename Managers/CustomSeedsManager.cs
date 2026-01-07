@@ -5,8 +5,10 @@ using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
+using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Quests;
@@ -33,8 +35,6 @@ namespace UnicornsCustomSeeds.Managers
     {
         public const string BASE_SEED_ID = "ogkushseed";
         
-        // Commit ID where this was working: 371da19bae50ee14c40430cf9e333c01f93262e1
-        public static Queue<SeedDefinition> SeedQueue = new Queue<SeedDefinition>();
         public static SeedFactory factory;
         public static Dictionary<string, UnicornSeedData> DiscoveredSeeds = new();
 
@@ -82,7 +82,7 @@ namespace UnicornsCustomSeeds.Managers
                 SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Key);
                 if (customDef != null)
                 {
-                    CreateShopListing(customDef, seed.Value.baseSeedId);
+                    CreateShopListing(customDef);
                 }
             }
 
@@ -92,9 +92,10 @@ namespace UnicornsCustomSeeds.Managers
         {
             SeedVisualsManager.seedIcons.Clear();
             SeedVisualsManager.appearanceMap.Clear();
+            SeedQuestManager.seedDropoff = null;
             DiscoveredSeeds.Clear();
-            SeedQueue.Clear();
-            //factories.Clear();
+            factory.DeleteChildren();
+            FirstLoad = false;
             //baseSeedDefinitions.Clear();
             //baseShopListing.Clear();
         }
@@ -137,10 +138,15 @@ namespace UnicornsCustomSeeds.Managers
                 price = price,
             };
             DiscoveredSeeds.Add(newSeed.ID, newSeedData);
-            CreateShopListing(newSeed, BASE_SEED_ID, price);
-            SeedQueue.Enqueue(newSeed);
+            CreateShopListing(newSeed, price);
 
-
+            var pots = GameObject.FindObjectsOfType<Pot>();
+            foreach ( Pot pot in pots)
+            {
+                if (pot.Configuration.TryCast<PotConfiguration>() is PotConfiguration config) {
+                    config.Seed.Options.Add(newSeed);
+                }
+            }
 
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null)
@@ -186,9 +192,9 @@ namespace UnicornsCustomSeeds.Managers
 
 
 
-        public static void CreateShopListing(SeedDefinition newSeed, string baseSeed, float price = 10)
+        public static void CreateShopListing(SeedDefinition newSeed, float price = 10)
         {
-            ShopListing baseListing = baseShopListing[baseSeed];
+            ShopListing baseListing = baseShopListing[BASE_SEED_ID];
             ShopListing newListing = new ShopListing();
             newListing.name = $"{newSeed.ID} (${price}) (Agriculture, )";
             newListing.OverridePrice = true;
@@ -203,10 +209,20 @@ namespace UnicornsCustomSeeds.Managers
             Shop.RefreshShownItems();
         }
 
+        public static void SeedFactoryLoader()
+        {
+            var baseSeed = Registry.GetItem<SeedDefinition>("ogkushseed");
+            if (baseSeed != null)
+            {
+                factory = new SeedFactory(baseSeed);
+            }
+        }
+
         public static SeedDefinition SeedDefinitionLoader(UnicornSeedData newSeedData)
         {
             SeedDefinition newSeed = null;
             WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(newSeedData.weedId);
+
 
             if (weedDef != null)
             {

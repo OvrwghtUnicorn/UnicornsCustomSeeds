@@ -14,6 +14,7 @@ using UnityEngine;
 
 using UnityEngine.Rendering;
 using UnicornsCustomSeeds.Managers;
+using Il2CppFluffyUnderware.DevTools.Extensions;
 
 namespace UnicornsCustomSeeds.Seeds
 {
@@ -40,6 +41,7 @@ namespace UnicornsCustomSeeds.Seeds
             {
                 GameObject go = new GameObject($"{baseSeedDefinition.ID}_CustomSeeds");
                 go.SetActive(false);
+                GameObject.DontDestroyOnLoad(go);
                 rootGameObject = go.transform;
             }
         }
@@ -71,6 +73,11 @@ namespace UnicornsCustomSeeds.Seeds
             }
         }
 
+        public void DeleteChildren()
+        {
+            rootGameObject.DeleteChildren(true,false);
+        }
+
         private void GrowLabel(Transform root, string seedDefId)
         {
             Transform labelTransform = null;
@@ -99,19 +106,6 @@ namespace UnicornsCustomSeeds.Seeds
                     rend.material = SeedVisualsManager.customMat;
                     labelTransform.gameObject.AddComponent<SeedVialLabel>();
                     labelTransform.name = labelTransform.name + ":" + seedDefId;
-                    //var meshFilter = labelTransform.GetComponent<MeshFilter>();
-                    //if (meshFilter != null)
-                    //{
-                    //    var localBounds = meshFilter.sharedMesh.bounds;
-
-                    //    MaterialPropertyBlock block = new MaterialPropertyBlock();
-                    //    block.SetColor("_ColorA", UnityEngine.Random.ColorHSV());
-                    //    block.SetColor("_ColorB", UnityEngine.Random.ColorHSV());
-                    //    block.SetFloat("_MinZ", localBounds.min.z);
-                    //    block.SetFloat("_MaxZ", localBounds.max.z);
-
-                    //    rend.SetPropertyBlock(block);
-                    //}
                 } else
                 {
                     Utility.Log("MATERIAL NOT LOADED!!!");

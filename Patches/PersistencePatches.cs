@@ -5,6 +5,7 @@ using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Management;
+using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.Persistence.ItemLoaders;
@@ -47,6 +48,9 @@ namespace UnicornsCustomSeeds.Patches
         public static void Postfix(LoadManager __instance)
         {
             if (__instance == null || string.IsNullOrEmpty(__instance.LoadedGameFolderPath)) return;
+
+            // Create the seed factory
+            //CustomSeedsManager.SeedFactoryLoader();
 
             try
             {
@@ -116,10 +120,16 @@ namespace UnicornsCustomSeeds.Patches
                 SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(parts);
                 if (newSeed != null)
                 {
+                    try
+                    {
+                        Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+                    }
+                    catch (Exception ex) {
+                        Utility.PrintException(ex);
+                    }
                     MelonLogger.Msg($"[CreateWeed_Patch] Successfully loaded seed: {newSeed.ID}");
                 }
             }
         }
     }
-
 }
