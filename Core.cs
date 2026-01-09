@@ -99,45 +99,6 @@ namespace UnicornsCustomSeeds
             }
         }
 
-        //[HarmonyPatch(typeof(ItemFieldUI), nameof(ItemFieldUI.Clicked))]
-        //public static class ItemFieldUI_Clicked_Patch
-        //{
-
-        //    public static bool Prefix(ItemFieldUI __instance)
-        //    {
-        //        if (__instance != null)
-        //        {
-        //            if (__instance.name == "Seed")
-        //            {
-        //                var options = __instance.Fields[0].Options;
-        //                var currentOptionIds = new System.Collections.Generic.HashSet<string>();
-
-        //                foreach (var option in options)
-        //                {
-        //                    if (option != null)
-        //                    {
-        //                        currentOptionIds.Add(option.ID);
-        //                    }
-        //                }
-
-        //                foreach (var unicornSeedData in CustomSeedsManager.DiscoveredSeeds.Values)
-        //                {
-        //                    if (!currentOptionIds.Contains(unicornSeedData.seedId))
-        //                    {
-        //                        SeedDefinition newSeed = Registry.GetItem<SeedDefinition>(unicornSeedData.seedId);
-        //                        if (newSeed != null)
-        //                        {
-        //                            options.Add(newSeed);
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //        }
-        //        return true;
-        //    }
-
-        //}
-
         [HarmonyPatch(typeof(S1PlayerTasks.SowSeedTask), nameof(S1PlayerTasks.SowSeedTask.OnSeedReachedDestination))]
         public static class SowSeedTask_OnSeedReachedDestination_Patch {
 

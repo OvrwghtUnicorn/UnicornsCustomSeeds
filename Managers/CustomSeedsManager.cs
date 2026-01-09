@@ -53,6 +53,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (shopInterface.gameObject.name == "WeedSupplierInterface")
                 {
+                    Utility.Log("Found Weed Supplier Interface");
                     shopGo = shopInterface.gameObject;
                     Shop = shopInterface;
                     break;
@@ -79,10 +80,10 @@ namespace UnicornsCustomSeeds.Managers
 
             foreach (var seed in DiscoveredSeeds)
             {
-                SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Key);
+                SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Value.seedId);
                 if (customDef != null)
                 {
-                    CreateShopListing(customDef);
+                    CreateShopListing(customDef,seed.Value.price);
                 }
             }
 
@@ -194,7 +195,8 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void CreateShopListing(SeedDefinition newSeed, float price = 10)
         {
-            ShopListing baseListing = baseShopListing[BASE_SEED_ID];
+            ShopListing baseListing = Shop.Listings[0];
+            baseListing.name = "Test";
             ShopListing newListing = new ShopListing();
             newListing.name = $"{newSeed.ID} (${price}) (Agriculture, )";
             newListing.OverridePrice = true;
