@@ -38,7 +38,6 @@ namespace UnicornsCustomSeeds.Managers
 
             if (seedDropoff == null)
             {
-                Utility.Log("Quest Started");
                 seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
             }
         }

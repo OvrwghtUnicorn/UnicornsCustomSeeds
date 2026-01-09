@@ -24,7 +24,6 @@ namespace UnicornsCustomSeeds.Managers
             albert = GameObject.FindObjectOfType<Albert>();
             if (albert != null){
                 if(albert.MSGConversation != null){
-                Utility.Log("ConversationManager: Found Albert Hoover");
                     RegisterConversation("Albert", albert.MSGConversation);
                     albertRelation = albert.RelationData;
                 }
@@ -40,9 +39,8 @@ namespace UnicornsCustomSeeds.Managers
                         for (var i = 0; i < generic.Entries.Count; i++) {
                             if (generic.Entries[i] != null && generic.Entries[i].Key == "supplier_meetings_unlocked")
                             {
-                                Utility.Log("Found Supplier Entry");
                                 Entry supplierEntry = generic.Entries[i];
-                                Utility.Log($"Chain Count: {supplierEntry.Chains.Length}");
+
                                 DialogueChain chain = supplierEntry.Chains[0];
                                 if (chain != null && chain.Lines[chain.Lines.Length - 1] != welcomeMessage)
                                 {
@@ -60,7 +58,7 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                Utility.Log("ConversationManager: Could not find Albert or his conversation.");
+                Utility.Error("ConversationManager: Could not find Albert or his conversation.");
             }
         }
 
@@ -96,7 +94,7 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                Utility.Log($"ConversationManager: Conversation for {characterName} not found.");
+                Utility.Error($"ConversationManager: Conversation for {characterName} not found.");
             }
         }
 
@@ -117,7 +115,7 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                Utility.Log($"ConversationManager: Conversation for {characterName} not found.");
+                Utility.LogError($"Conversation for {characterName} not found.");
             }
         }
         

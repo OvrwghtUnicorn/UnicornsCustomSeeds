@@ -46,7 +46,6 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (stash != null && stash.gameObject.name.ToLower().Contains("albert"))
                 {
-                    Utility.Log(stash.gameObject.name);
                     albertsStash = stash;
                     stash.Storage.onClosed += (Action) AlbertsStashClosed;
                 }
@@ -86,10 +85,10 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cashInstance != null && weedInstance != null)
             {
-                Utility.Log($"Weed: {weedInstance.ID}");
                 string packaging = weedInstance.AppliedPackaging?.Name;
                 int quantity = weedInstance.Quantity;
                 uint packageAmount = PackageAmount(packaging);
+                if (packageAmount <= 0) return;
                 uint total = (uint)(quantity * packageAmount);
                 if (cashInstance.Balance >= StashCostEntry.Value && total >= StashQtyEntry.Value)
                 {

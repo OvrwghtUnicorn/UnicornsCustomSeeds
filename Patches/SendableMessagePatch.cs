@@ -28,7 +28,7 @@ namespace UnicornsCustomSeeds.Patches
                 {
                     invalidReason = "No deaddrops are available";
                     __result = false;
-                } else if (ConversationManager.albert.RelationData.RelationDelta < 4f)
+                } else if (ConversationManager.albert == null || ConversationManager.albert.RelationData.RelationDelta < 4f)
                 {
                     invalidReason = "Relationship isn't good enough";
                     __result = false;

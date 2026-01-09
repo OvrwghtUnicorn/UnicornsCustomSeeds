@@ -67,8 +67,7 @@ namespace UnicornsCustomSeeds.Patches
                     CustomSeedsManager.FirstLoad = false;
                     // Load and deserialize directly into an IL2CPP array/list
                     string json = File.ReadAllText(filePath);
-                    Utility.Error(filePath);
-                    // Try array first
+
                     try
                     {
                         seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
@@ -127,7 +126,6 @@ namespace UnicornsCustomSeeds.Patches
                     catch (Exception ex) {
                         Utility.PrintException(ex);
                     }
-                    MelonLogger.Msg($"[CreateWeed_Patch] Successfully loaded seed: {newSeed.ID}");
                 }
             }
         }
