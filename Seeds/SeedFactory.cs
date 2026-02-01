@@ -1,20 +1,22 @@
-﻿using Harmony;
-using Il2Cpp;
+﻿using UnityEngine;
+using UnicornsCustomSeeds.Managers;
+
+#if IL2CPP
 using Il2CppScheduleOne.AvatarFramework.Equipping;
-using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
-using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Storage;
-using MelonLoader;
-using MelonLoader.Utils;
-using UnicornsCustomSeeds.TemplateUtils;
-using UnityEngine;
-
-using UnityEngine.Rendering;
-using UnicornsCustomSeeds.Managers;
 using Il2CppFluffyUnderware.DevTools.Extensions;
+#elif MONO
+using ScheduleOne.AvatarFramework.Equipping;
+using ScheduleOne.Equipping;
+using ScheduleOne.Growing;
+using ScheduleOne.Product;
+using ScheduleOne.Storage;
+using FluffyUnderware.DevTools.Extensions;
+#endif
+
 
 namespace UnicornsCustomSeeds.Seeds
 {
@@ -48,7 +50,12 @@ namespace UnicornsCustomSeeds.Seeds
 
         private void InitializeBasePlant(SeedDefinition seedDefinition)
         {
-            if (seedDefinition.PlantPrefab.TryCast<WeedPlant>() is WeedPlant weedPlantPrefab)
+#if IL2CPP
+            WeedPlant weedPlantPrefab = seedDefinition.PlantPrefab.TryCast<WeedPlant>();
+#elif MONO
+            WeedPlant weedPlantPrefab = (WeedPlant)seedDefinition.PlantPrefab;
+#endif
+            if (weedPlantPrefab != null)
             {
                 basePlantPrefab = weedPlantPrefab;
                 if (basePlantPrefab != null)
@@ -62,7 +69,12 @@ namespace UnicornsCustomSeeds.Seeds
 
         private void InitializeEquippable(SeedDefinition seedDefinition)
         {
-            if (seedDefinition.Equippable.TryCast<Equippable_Seed>() is Equippable_Seed equipSeed)
+#if IL2CPP
+            Equippable_Seed equipSeed = seedDefinition.Equippable.TryCast<Equippable_Seed>();
+#elif MONO
+            Equippable_Seed equipSeed = (Equippable_Seed)seedDefinition.Equippable;
+#endif
+            if ( equipSeed != null )
             {
                 baseEquippableSeedPrefab = equipSeed;
                 baseAvatarEquippablePrefab = equipSeed.AvatarEquippable;
@@ -138,16 +150,7 @@ namespace UnicornsCustomSeeds.Seeds
                 {
                     weedAppearance = WeedDefinition.GetAppearanceSettings(newDef.Properties);
                 }
-                /*
-                [Custom Weed Seeds] [Appearance] Main Color = RGBA(109, 146, 81, 255) #6d9251
-                [Custom Weed Seeds] [Appearance] Secondary Color = RGBA(153, 150, 78, 255) #99964e
-                [Custom Weed Seeds] [Appearance] Stem Color = RGBA(87, 116, 64, 255) #577440
-                [Custom Weed Seeds] [Appearance] Leaf Color = RGBA(131, 148, 79, 255)  #83944f
-                 */
-                //MelonLogger.Msg($"[Appearance] Main Color = {weedAppearance.MainColor}");
-                //MelonLogger.Msg($"[Appearance] Secondary Color = {weedAppearance.SecondaryColor}");
-                //MelonLogger.Msg($"[Appearance] Stem Color = {weedAppearance.StemColor}");
-                //MelonLogger.Msg($"[Appearance] Leaf Color = {weedAppearance.LeafColor}");
+
                 if (stage != null && weedAppearance != null)
                 {
                     for (int i = 0; i < stage.transform.childCount; i++)

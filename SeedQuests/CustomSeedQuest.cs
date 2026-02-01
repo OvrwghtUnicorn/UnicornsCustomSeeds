@@ -1,14 +1,6 @@
 ﻿using S1API.Quests;
 using S1API.Saveables;
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using UnityEngine;
-using Il2CppScheduleOne.UI.Phone.Messages;
-using Il2CppScheduleOne.Messaging;
 using UnicornsCustomSeeds.Managers;
-
-
 
 #if IL2CPP
 using Il2CppScheduleOne.Product;
@@ -30,10 +22,18 @@ namespace UnicornsCustomSeeds.SeedQuests
         /// </summary>
         protected override string Title => "Drop off the Mix";
 
+        protected override void OnLoaded()
+        {
+            if (QuestEntries.Count == 0)
+            {
+                customSeedEntry = AddEntry($"Give Albert {StashManager.StashQtyEntry.Value}x of a Weed Mix and ${StashManager.StashCostEntry.Value}", poiPosition: StashManager.albertsStash.transform.position);
+            }
+        }
+
         /// <summary>
         /// The description of the quest
         /// </summary>
-        protected override string Description => "Take 20x of your weed mix and $500 dollary doos to Albert Hoovers supply stash";
+        protected override string Description => $"Take {StashManager.StashQtyEntry.Value}x of your weed mix and ${StashManager.StashCostEntry.Value} dollary doos to Albert Hoovers supply stash";
 
         /// <summary>
         /// Persistent data for this quest
@@ -51,20 +51,10 @@ namespace UnicornsCustomSeeds.SeedQuests
         /// </summary>
         protected override void OnCreated()
         {
-            if (StashManager.albertsStash != null)
-            {
-                Utility.Log("Stash exists");
+            if (QuestEntries.Count == 0) {
+                // Add quest entry: Complete objective
+                customSeedEntry = AddEntry($"Give Albert {StashManager.StashQtyEntry.Value}x of a Weed Mix and ${StashManager.StashCostEntry.Value}", poiPosition: StashManager.albertsStash.transform.position);
             }
-            
-            // Add quest entry: Complete objective
-            customSeedEntry = AddEntry("Give Albert 20x of a Weed Mix and $500", poiPosition: StashManager.albertsStash.transform.position);
-
-            //OnComplete += (Action) HandleComplete;
-        }
-
-        public void HandleComplete()
-        {
-            Utility.Log("Handle Complete");
         }
 
     }

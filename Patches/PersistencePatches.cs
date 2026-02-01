@@ -1,24 +1,32 @@
 ﻿using HarmonyLib;
+using MelonLoader;
+using Newtonsoft.Json;
+using UnicornsCustomSeeds.Managers;
+using UnicornsCustomSeeds.Seeds;
+using Il2CppFishNet;
+
+
+#if IL2CPP
 using Il2CppFishNet.Connection;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
-using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Management;
-using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.Persistence;
-using Il2CppScheduleOne.Persistence.Datas;
-using Il2CppScheduleOne.Persistence.ItemLoaders;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.UI.MainMenu;
-using MelonLoader;
-using Newtonsoft.Json;
-using System.Reflection;
-using UnicornsCustomSeeds.Managers;
-using UnicornsCustomSeeds.Seeds;
-using UnicornsCustomSeeds.TemplateUtils;
-using UnityEngine;
-using Il2CppGeneric = Il2CppSystem.Collections.Generic;
+using GenericCol = Il2CppSystem.Collections.Generic;
+#elif MONO
+using FishNet.Connection;
+using ScheduleOne;
+using ScheduleOne.DevUtilities;
+using ScheduleOne.Growing;
+using ScheduleOne.Management;
+using ScheduleOne.Persistence;
+using ScheduleOne.Product;
+using ScheduleOne.UI.MainMenu;
+using GenericCol = System.Collections.Generic;
+#endif
 
 namespace UnicornsCustomSeeds.Patches
 {
@@ -29,7 +37,7 @@ namespace UnicornsCustomSeeds.Patches
         public static void Postfix(LoadManager __instance, SaveInfo autoLoadSave, MainMenuPopup.Data mainMenuPopup, bool preventLeaveLobby)
         {
             var seedList = Singleton<ManagementUtilities>.Instance.Seeds;
-            var seedListClean = new Il2CppGeneric.List<SeedDefinition>();
+            var seedListClean = new GenericCol.List<SeedDefinition>();
             foreach (var seed in seedList)
             {
                 if (seed != null && !seed.ID.Contains("customseeddefinition"))
@@ -114,6 +122,11 @@ namespace UnicornsCustomSeeds.Patches
                 List<string> properties,
                 WeedAppearanceSettings appearance)
         {
+            if(Registry.ItemExists(id + "_customseeddefinition"))
+            {
+                return;
+            }
+
             if (CustomSeedsManager.DiscoveredSeeds.TryGetValue(id, out var parts))
             {
                 SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(parts);
@@ -127,6 +140,11 @@ namespace UnicornsCustomSeeds.Patches
                         Utility.PrintException(ex);
                     }
                 }
+
+                //if (InstanceFinder.IsClient && !InstanceFinder.IsServer)
+                //{
+                //    DeferredPlantsManager.TrySpawnQueuedPlants();
+                //}
             }
         }
     }

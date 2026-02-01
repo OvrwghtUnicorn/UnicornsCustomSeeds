@@ -1,9 +1,10 @@
 {
-	"name": "Unicorns Custom Seeds",
-	"version_number": "1.0.0",
-	"description": "Get your custom seeds from unicorn",
+	"name": "UnicornsCustomSeeds",
+	"version_number": "1.0.2",
+	"description": "Your good friend unicorn can help synthesize your weed mixes into weed seeds",
 	"website_url": "",
 	"dependencies": [
-		"LavaGang-MelonLoader-0.7.0"
+		"LavaGang-MelonLoader-0.7.0",
+		"ifBars-S1API_Forked-2.9.3"
 	]
 }

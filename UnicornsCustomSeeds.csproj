@@ -5,8 +5,8 @@
 		<RootNamespace>UnicornsCustomSeeds</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.0.0</AssemblyVersion>
-		<FileVersion>1.0.0</FileVersion>
+		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<FileVersion>1.0.2</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -38,6 +38,8 @@
 	<ItemGroup>
 		<Compile Include="Core.cs" />
 		<Compile Include="Managers\ConversationManager.cs" />
+		<Compile Include="Managers\DeferredPlantsManager.cs" />
+		<Compile Include="Patches\NetworkingPatches.cs" />
 		<Compile Include="SeedQuests\CustomSeedQuest.cs" />
 		<Compile Include="SeedQuests\CustomSeedQuestData.cs" />
 		<Compile Include="Managers\SeedQuestManager.cs" />
@@ -52,8 +54,6 @@
 		<Compile Include="Seeds\SeedVialLabel.cs" />
 		<Compile Include="Managers\StashManager.cs" />
 		<Compile Include="TemplateUtils\AssetBundleUtils.cs" />
-		<Compile Include="TemplateUtils\SeedIconGenerator.cs" />
-		<Compile Include="TemplateUtils\PrefabDebugger.cs" />
 		<Compile Include="TemplateUtils\Utility.cs" />
 		<Folder Include="Libs\" />
 		<Folder Include="Assets\" />
@@ -68,7 +68,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="S1API.Forked" Version="2.8.5" />
+		<PackageReference Include="S1API.Forked" Version="2.9.2" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->
@@ -249,8 +249,7 @@
 			<HintPath>$(S1Dir)\Schedule I_Data\Managed\Unity.RenderPipelines.Core.ShaderLibrary.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary">
-			<HintPath>$(S1Dir)\Schedule
-				I_Data\Managed\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll</HintPath>
+			<HintPath>$(S1Dir)\Schedule I_Data\Managed\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.RenderPipelines.Universal.Config.Runtime">
 			<HintPath>$(S1Dir)\Schedule I_Data\Managed\Unity.RenderPipelines.Universal.Config.Runtime.dll</HintPath>
@@ -412,8 +411,7 @@
 			<HintPath>$(S1Dir)\Schedule I_Data\Managed\UnityEngine.PropertiesModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule">
-			<HintPath>$(S1Dir)\Schedule
-				I_Data\Managed\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
+			<HintPath>$(S1Dir)\Schedule I_Data\Managed\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.ScreenCaptureModule">
 			<HintPath>$(S1Dir)\Schedule I_Data\Managed\UnityEngine.ScreenCaptureModule.dll</HintPath>
@@ -563,8 +561,7 @@
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppAstarPathfindingProject.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2CppBoxophobic.AtmosphericHeightFog.Runtime">
-			<HintPath>
-				$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppBoxophobic.AtmosphericHeightFog.Runtime.dll</HintPath>
+			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppBoxophobic.AtmosphericHeightFog.Runtime.dll</HintPath>
 		</Reference>
 		<Reference Include="Il2CppBoxophobic.Utils.Scripts">
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppBoxophobic.Utils.Scripts.dll</HintPath>
@@ -729,8 +726,7 @@
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Unity.Postprocessing.Runtime.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.RenderPipeline.Universal.ShaderLibrary">
-			<HintPath>
-				$(S1Dir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipeline.Universal.ShaderLibrary.dll</HintPath>
+			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipeline.Universal.ShaderLibrary.dll</HintPath>
 		</Reference>
 		<Reference Include="Unity.RenderPipelines.Core.Runtime">
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Unity.RenderPipelines.Core.Runtime.dll</HintPath>
@@ -865,8 +861,7 @@
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.PropertiesModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule">
-			<HintPath>
-				$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
+			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.ScreenCaptureModule">
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.ScreenCaptureModule.dll</HintPath>
@@ -938,8 +933,7 @@
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityTestProtocolModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.UnityWebRequestAssetBundleModule">
-			<HintPath>
-				$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
+			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath>
 		</Reference>
 		<Reference Include="UnityEngine.UnityWebRequestAudioModule">
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\UnityEngine.UnityWebRequestAudioModule.dll</HintPath>

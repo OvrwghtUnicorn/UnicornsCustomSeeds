@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 using UnityEngine;
 using MelonLoader;
-using Il2CppScheduleOne.Product;
 using UnicornsCustomSeeds.Managers;
+#if IL2CPP
+using Il2CppScheduleOne.Product;
+#elif MONO
+using ScheduleOne.Product;
+#endif
 
 namespace UnicornsCustomSeeds.Seeds
 {

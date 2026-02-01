@@ -1,9 +1,11 @@
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Product;
-using System;
-using System.Collections.Generic;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
+
+#if IL2CPP
+using Il2CppScheduleOne.Product;
+#elif MONO
+using ScheduleOne.Product;
+#endif
 
 namespace UnicornsCustomSeeds.Managers
 {

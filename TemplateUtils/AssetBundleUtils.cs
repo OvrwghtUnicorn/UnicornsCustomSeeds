@@ -1,5 +1,4 @@
 ﻿using MelonLoader;
-using System.Reflection.Metadata;
 using UnityEngine;
 #if IL2CPP
 using AssetBundle = UnityEngine.Il2CppAssetBundle;

@@ -1,21 +1,14 @@
-﻿using Il2CppScheduleOne.DevUtilities;
+﻿using MelonLoader;
+
+#if IL2CPP
 using Il2CppScheduleOne.Economy;
-using Il2CppScheduleOne.GameTime;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Product;
-using Il2CppScheduleOne.Product.Packaging;
-using Il2CppScheduleOne.StationFramework;
-using Il2CppScheduleOne.UI.Phone.Delivery;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnicornsCustomSeeds.Seeds;
-using UnityEngine;
-using UnityEngine.Events;
-
-using MelonLoader;
+#elif MONO
+using ScheduleOne.Economy;
+using ScheduleOne.ItemFramework;
+using ScheduleOne.Product;
+#endif
 
 namespace UnicornsCustomSeeds.Managers
 {
@@ -27,16 +20,17 @@ namespace UnicornsCustomSeeds.Managers
         public static bool onClosedExecuting = false;
         
         // Constants for Albert's Stash requirements
-        // Constants for Albert's Stash requirements
-        private static MelonPreferences_Category ConfigCategory;
-        private static MelonPreferences_Entry<int> StashCostEntry;
-        private static MelonPreferences_Entry<int> StashQtyEntry;
+        public static MelonPreferences_Category ConfigCategory;
+        public static MelonPreferences_Entry<int> StashCostEntry;
+        public static MelonPreferences_Entry<int> StashQtyEntry;
+        public static MelonPreferences_Entry<int> SynthesizeTime;
 
         public static void InitializeConfig()
         {
-            ConfigCategory = MelonPreferences.CreateCategory("UnicornsCustomSeeds");
-            StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement");
-            StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement");
+            ConfigCategory = MelonPreferences.CreateCategory("Unicorns Custom Seeds");
+            StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement","The price that Albert charges to synthesize seeds");
+            StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement", "The quantity of weed that needs to be provided of a certain mix");
+            SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in secondsd that it will take for Albert to synthesize a seed");
         }
 
         public static void GetAlbertsStash()
@@ -46,6 +40,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (stash != null && stash.gameObject.name.ToLower().Contains("albert"))
                 {
+                    Utility.Log("Alberts Ready to Synthesize");
                     albertsStash = stash;
                     stash.Storage.onClosed += (Action) AlbertsStashClosed;
                 }
@@ -68,14 +63,22 @@ namespace UnicornsCustomSeeds.Managers
                     continue;
                 }
 
+#if IL2CPP
                 if (slot.ItemInstance.TryCast<CashInstance>() is CashInstance cashValue)
+#elif MONO
+                if (slot.ItemInstance is CashInstance cashValue)
+#endif
                 {
                     cashSlot = slot;
                     cashInstance = cashValue;
                     continue;
                 }
 
+#if IL2CPP
                 if (slot.ItemInstance.TryCast<WeedInstance>() is WeedInstance weedInput)
+#elif MONO
+                if (slot.ItemInstance is WeedInstance weedInput)
+#endif
                 {
                     weedSlot = slot;
                     weedInstance = weedInput;
@@ -92,7 +95,12 @@ namespace UnicornsCustomSeeds.Managers
                 uint total = (uint)(quantity * packageAmount);
                 if (cashInstance.Balance >= StashCostEntry.Value && total >= StashQtyEntry.Value)
                 {
-                    if (weedInstance.Definition.TryCast<WeedDefinition>() is WeedDefinition definition && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
+#if IL2CPP
+                    WeedDefinition definition = weedInstance.Definition.TryCast<WeedDefinition>();
+#elif MONO
+                    WeedDefinition definition = (WeedDefinition)weedInstance.Definition;
+#endif
+                    if ( definition != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
                         if(SeedQuestManager.HasActiveQuest)
                         {
@@ -124,7 +132,14 @@ namespace UnicornsCustomSeeds.Managers
         {
             var ingredients = GetRecipe(product);
             var rawBaseStrain = ingredients[0];
-            if (rawBaseStrain.TryCast<WeedDefinition>() is WeedDefinition weedDefinition) { return weedDefinition; }
+
+#if IL2CPP
+            WeedDefinition weedDefinition = rawBaseStrain.TryCast<WeedDefinition>();
+#elif MONO
+            WeedDefinition weedDefinition = (WeedDefinition) rawBaseStrain;
+#endif
+
+            if ( weedDefinition != null ) { return weedDefinition; }
             return null;
         }
 
@@ -200,11 +215,19 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (ingredient != null)
                 {
+#if IL2CPP
                     if (ingredient.Item.TryCast<ProductDefinition>() is ProductDefinition prodDef)
+#elif MONO
+                    if (ingredient.Item is ProductDefinition prodDef)
+#endif
                     {
                         DeepSearchRecursive(prodDef, result, visited);
                     }
+#if IL2CPP
                     else if (ingredient.Item.TryCast<PropertyItemDefinition>() is PropertyItemDefinition propertyItem)
+#elif MONO
+                    else if (ingredient.Item is PropertyItemDefinition propertyItem)
+#endif
                     {
                         result.Add(propertyItem);
                     }

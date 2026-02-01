@@ -1,26 +1,39 @@
-﻿using Il2Cpp;
+﻿using MelonLoader;
+using Newtonsoft.Json;
+using System.Collections;
+using UnicornsCustomSeeds.Seeds;
+using UnityEngine;
+
+#if IL2CPP
+using Il2Cpp;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Economy;
-using Il2CppScheduleOne.Equipping;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.Messaging;
-using Il2CppScheduleOne.NPCs.CharacterClasses;
 using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Quests;
-using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.UI.Shop;
-using MelonLoader;
-using Newtonsoft.Json;
-using S1API.DeadDrops;
-using System.Collections;
-using UnicornsCustomSeeds.Seeds;
-using UnityEngine;
-using Il2Generic = Il2CppSystem.Collections.Generic;
+using GenericCol = Il2CppSystem.Collections.Generic;
+#elif MONO
+using ScheduleOne;
+using ScheduleOne.DevUtilities;
+using ScheduleOne.Economy;
+using ScheduleOne.Growing;
+using ScheduleOne.ItemFramework;
+using ScheduleOne.Management;
+using ScheduleOne.Messaging;
+using ScheduleOne.ObjectScripts;
+using ScheduleOne.PlayerScripts;
+using ScheduleOne.Product;
+using ScheduleOne.Quests;
+using ScheduleOne.UI.Shop;
+using GenericCol = System.Collections.Generic;
+#endif
 
 namespace UnicornsCustomSeeds.Managers
 {
@@ -41,9 +54,15 @@ namespace UnicornsCustomSeeds.Managers
         public static ShopInterface Shop = null;
         public static GameObject shopGo = null;
 
-        public static Il2Generic.Dictionary<string, SeedDefinition> baseSeedDefinitions = new Il2Generic.Dictionary<string, SeedDefinition>();
-        public static Il2Generic.Dictionary<string, ShopListing> baseShopListing = new Il2Generic.Dictionary<string, ShopListing>();
+#if IL2CPP
+        public static GenericCol.Dictionary<string, SeedDefinition> baseSeedDefinitions = new GenericCol.Dictionary<string, SeedDefinition>();
+        public static GenericCol.Dictionary<string, ShopListing> baseShopListing = new GenericCol.Dictionary<string, ShopListing>();
         public delegate bool ValidityCheckDelegate(SendableMessage message, out Il2CppSystem.String invalidReason);
+#elif MONO
+        public static GenericCol.Dictionary<string, SeedDefinition> baseSeedDefinitions = new GenericCol.Dictionary<string, SeedDefinition>();
+        public static GenericCol.Dictionary<string, ShopListing> baseShopListing = new GenericCol.Dictionary<string, ShopListing>();
+        public delegate bool ValidityCheckDelegate(SendableMessage message, out String invalidReason);
+#endif
 
         public static bool FirstLoad = false;
         public static void Initialize()
@@ -62,7 +81,7 @@ namespace UnicornsCustomSeeds.Managers
 
             if (Shop == null)
             {
-                MelonLogger.Msg("Shop is null!");
+                Utility.Error("Shop is null!");
                 return;
             }
 
@@ -72,11 +91,6 @@ namespace UnicornsCustomSeeds.Managers
             SeedVisualsManager.LoadSeedMaterial();
 
             InitDictionary();
-            if (!baseSeedDefinitions.ContainsKey(BASE_SEED_ID))
-            {
-                MelonLogger.Msg($"{BASE_SEED_ID} doesn't exist!");
-                return;
-            }
 
             foreach (var seed in DiscoveredSeeds)
             {
@@ -103,7 +117,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void StartSeedCreation(WeedDefinition weedDef)
         {
-            MelonCoroutines.Start(CreateSeed(10f, weedDef));
+            MelonCoroutines.Start(CreateSeed(weedDef));
         }
 
         public static void BroadcastCustomSeed(UnicornSeedData seed)
@@ -112,7 +126,7 @@ namespace UnicornsCustomSeeds.Managers
             string json = JsonConvert.SerializeObject(seed);
             string payload = "[UNISEED]" + json;
 
-            var props = new Il2Generic.List<string>();
+            var props = new GenericCol.List<string>();
             var appearance = new WeedAppearanceSettings(
                 prodManager.DefaultWeed.MainMat.color,
                 prodManager.DefaultWeed.SecondaryMat.color,
@@ -123,9 +137,9 @@ namespace UnicornsCustomSeeds.Managers
                                              EDrugType.Marijuana, props, appearance);
         }
 
-        public static IEnumerator CreateSeed(float delaySeconds, WeedDefinition weedDef)
+        public static IEnumerator CreateSeed(WeedDefinition weedDef)
         {
-            yield return new WaitForSeconds(delaySeconds);
+            yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
 
             var newSeed = factory.CreateSeedDefinition(weedDef);
 
@@ -144,7 +158,11 @@ namespace UnicornsCustomSeeds.Managers
             var pots = GameObject.FindObjectsOfType<Pot>();
             foreach ( Pot pot in pots)
             {
+#if IL2CPP
                 if (pot.Configuration.TryCast<PotConfiguration>() is PotConfiguration config) {
+#elif MONO
+                if (pot.Configuration is PotConfiguration config) {
+#endif
                     config.Seed.Options.Add(newSeed);
                 }
             }
@@ -173,8 +191,11 @@ namespace UnicornsCustomSeeds.Managers
             var listings = Shop.Listings;
             foreach (ShopListing listing in listings)
             {
-
+#if IL2CPP
                 if (listing.Item.TryCast<SeedDefinition>() is SeedDefinition seed)
+#elif MONO
+                if (listing.Item is SeedDefinition seed)
+#endif
                 {
                     if (!baseSeedDefinitions.ContainsKey(seed.ID))
                     {

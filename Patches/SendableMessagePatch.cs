@@ -1,14 +1,15 @@
 ﻿using HarmonyLib;
+using UnicornsCustomSeeds.Managers;
+
+#if IL2CPP
 using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.PlayerScripts;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-using System.Threading.Tasks;
-using UnicornsCustomSeeds.Managers;
+#elif MONO
+using ScheduleOne.Economy;
+using ScheduleOne.Messaging;
+using ScheduleOne.PlayerScripts;
+#endif
 
 namespace UnicornsCustomSeeds.Patches
 {

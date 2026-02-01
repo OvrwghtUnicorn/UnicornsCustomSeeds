@@ -1,15 +1,11 @@
-using Il2CppScheduleOne.DevUtilities;
-using Il2CppScheduleOne.Messaging;
-using Il2CppScheduleOne.NPCs.CharacterClasses;
-using Il2CppScheduleOne.Quests;
-using Il2CppScheduleOne.UI.Phone.Messages;
-using MelonLoader;
-using S1API.Quests;
-using System;
-using System.Collections.Generic;
 using UnicornsCustomSeeds.SeedQuests;
-using UnityEngine;
-
+#if IL2CPP
+using Il2CppScheduleOne.Messaging;
+using Il2CppScheduleOne.UI.Phone.Messages;
+#elif MONO
+using ScheduleOne.Messaging;
+using ScheduleOne.UI.Phone.Messages;
+#endif
 namespace UnicornsCustomSeeds.Managers
 {
     public static class SeedQuestManager
@@ -17,11 +13,17 @@ namespace UnicornsCustomSeeds.Managers
         public static CustomSeedQuest seedDropoff;
 
         public static string messageId = "Synthesize Seeds";
-        public static bool HasActiveQuest => seedDropoff != null;
+        public static bool HasActiveQuest => S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") != null;
 
         public static void Init()
         {
-             MSGConversation convo = ConversationManager.GetConversation("Albert");
+            var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+            if (quest != null)
+            {
+                seedDropoff = quest;
+            }
+
+            MSGConversation convo = ConversationManager.GetConversation("Albert");
              if (convo != null)
              {
                  MessageSenderInterface senderInterface = convo.senderInterface;

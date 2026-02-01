@@ -1,13 +1,19 @@
+using System.Collections;
+using UnityEngine;
+using MelonLoader;
+#if IL2CPP
+using Il2CppScheduleOne.Dialogue;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
 using Il2CppScheduleOne.NPCs.Relation;
-using System.Collections;
-using System.Collections.Generic;
-using UnicornsCustomSeeds.TemplateUtils;
-using UnityEngine;
-using MelonLoader;
-using Il2CppScheduleOne.Dialogue;
+#elif MONO
+using ScheduleOne.Dialogue;
+using ScheduleOne.Messaging;
+using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.NPCs.CharacterClasses;
+using ScheduleOne.NPCs.Relation;
+#endif
 
 namespace UnicornsCustomSeeds.Managers
 {
@@ -37,7 +43,11 @@ namespace UnicornsCustomSeeds.Managers
                         DialogueDatabase db = albert.DialogueHandler.Database;
                         var generic = db.GetModule(EDialogueModule.Generic);
                         for (var i = 0; i < generic.Entries.Count; i++) {
+#if IL2CPP
                             if (generic.Entries[i] != null && generic.Entries[i].Key == "supplier_meetings_unlocked")
+#elif MONO
+                            if (generic.Entries[i].Key == "supplier_meetings_unlocked")
+#endif
                             {
                                 Entry supplierEntry = generic.Entries[i];
 
@@ -115,7 +125,7 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                Utility.LogError($"Conversation for {characterName} not found.");
+                Utility.Error($"Conversation for {characterName} not found.");
             }
         }
         
