@@ -146,14 +146,7 @@ namespace UnicornsCustomSeeds.Patches
 
                 // Seed is missing on this client → defer this spawn.
                 Utility.Log($"[CustomSeeds] Deferring RPC plant spawn for pot {__instance.GUID} and seedId=" + seedID);
-                if (DeferredPlantsManager.seedsToLoad.ContainsKey(seedID))
-                {
-                    DeferredPlantsManager.seedsToLoad[seedID].Add((__instance, seedID, normalizedSeedProgress));
-                } else
-                {
-                    System.Collections.Generic.List<(Pot pot, string SeedId, float Progress)> seedList = new System.Collections.Generic.List<(Pot pot, string SeedId, float Progress)> { (__instance, seedID, normalizedSeedProgress) };
-                    DeferredPlantsManager.seedsToLoad.Add(seedID,seedList);
-                }
+                DeferredPlantsManager.AddDeferredSeed(__instance, seedID, normalizedSeedProgress);
                 return false;
             }
         }
@@ -171,31 +164,12 @@ namespace UnicornsCustomSeeds.Patches
                 if (!InstanceFinder.IsClient || InstanceFinder.IsServer)
                     return true;
 
-                //// During replay we want vanilla logic to run unmodified.
-                //if (DeferredPlantsManager.IsReplaying)
-                //    return true;
-
-                //if (string.IsNullOrEmpty(__instance.seed))
-                //    return true;
-
-                //if (!seedID.Contains("customseeddefinition"))
-                //    return true;
-
-                //if (Registry.ItemExists(seedID)) return true;
-
-                //// Seed is missing on this client → defer this spawn.
-                //Utility.Log("[CustomSeeds] Deferring RPC plant spawn for seedId=" + seedID);
-                //if (DeferredPlantsManager.seedsToLoad.ContainsKey(seedID))
-                //{
-                //    DeferredPlantsManager.seedsToLoad[seedID].Add((__instance, seedID, normalizedSeedProgress));
-                //}
-                //else
-                //{
-                //    System.Collections.Generic.List<(Pot pot, string SeedId, float Progress)> seedList = new System.Collections.Generic.List<(Pot pot, string SeedId, float Progress)> { (__instance, seedID, normalizedSeedProgress) };
-                //    DeferredPlantsManager.seedsToLoad.Add(seedID, seedList);
-                //}
-
-                Utility.Log($"Plant index of {__instance.GUID}");
+                if (DeferredPlantsManager.PendingPotGuids.Contains(__instance.GUID.ToString()))
+                {
+                    Utility.Log($"[CustomSeeds] Deferring SetHarvestableActive for pot {__instance.GUID}, index {harvestableIndex}, active {active}");
+                    DeferredPlantsManager.AddHarvestableUpdate(__instance.GUID.ToString(), harvestableIndex, active);
+                    return false;
+                }
 
                 return true;
             }

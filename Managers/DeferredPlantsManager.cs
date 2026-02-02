@@ -9,16 +9,20 @@ namespace UnicornsCustomSeeds.Managers
 {
     public static class DeferredPlantsManager
     {
-        private struct Entry
+        public struct DeferredSeedData
         {
             public Pot Pot;
-            public NetworkConnection Conn;
             public string SeedId;
             public float Progress;
         }
 
-        private static readonly List<Entry> _entries = new List<Entry>();
-        public static Dictionary<string,List<(Pot pot, string SeedId, float Progress)>> seedsToLoad = new Dictionary<string, List<(Pot pot, string SeedId, float Progress)>>();
+        public struct HarvestableUpdateData
+        {
+            public int Index;
+            public bool Active;
+        }
+
+        public static Dictionary<string, List<DeferredSeedData>> seedsToLoad = new Dictionary<string, List<DeferredSeedData>>();
 
         public static bool IsReplaying = false;
 
@@ -45,18 +49,31 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-        public static void Enqueue(
-            Pot pot,
-            NetworkConnection conn,
-            string seedId,
-            float progress)
+        public static HashSet<string> PendingPotGuids = new HashSet<string>();
+        public static Dictionary<string, List<HarvestableUpdateData>> DeferredHarvestables = new Dictionary<string, List<HarvestableUpdateData>>();
+
+        public static void AddDeferredSeed(Pot pot, string seedId, float progress)
         {
-            Entry e;
-            e.Pot = pot;
-            e.Conn = conn;
-            e.SeedId = seedId;
-            e.Progress = progress;
-            _entries.Add(e);
+            if (seedsToLoad.ContainsKey(seedId))
+            {
+                seedsToLoad[seedId].Add(new DeferredSeedData { Pot = pot, SeedId = seedId, Progress = progress });
+            }
+            else
+            {
+                List<DeferredSeedData> seedList = new List<DeferredSeedData>();
+                seedList.Add(new DeferredSeedData { Pot = pot, SeedId = seedId, Progress = progress });
+                seedsToLoad.Add(seedId, seedList);
+            }
+            PendingPotGuids.Add(pot.GUID.ToString());
+        }
+
+        public static void AddHarvestableUpdate(string potGuid, int index, bool active)
+        {
+            if (!DeferredHarvestables.ContainsKey(potGuid))
+            {
+                DeferredHarvestables[potGuid] = new List<HarvestableUpdateData>();
+            }
+            DeferredHarvestables[potGuid].Add(new HarvestableUpdateData { Index = index, Active = active });
         }
 
         public static void TrySpawnQueuedPlants(string seedId)
@@ -65,9 +82,20 @@ namespace UnicornsCustomSeeds.Managers
             if (seedsToLoad.ContainsKey(seedId))
             {
                 var potsToQueue = seedsToLoad[seedId];
-                foreach ( var potTuple in potsToQueue)
+                foreach ( var data in potsToQueue)
                 {
-                    potTuple.pot.PlantSeed_Client(null,potTuple.SeedId,potTuple.Progress);
+                    data.Pot.PlantSeed_Client(null, data.SeedId, data.Progress);
+
+                    string potGuid = data.Pot.GUID.ToString();
+                    if (DeferredHarvestables.ContainsKey(potGuid))
+                    {
+                        foreach (var update in DeferredHarvestables[potGuid])
+                        {
+                            data.Pot.Plant.SetHarvestableActive(update.Index, update.Active);
+                        }
+                        DeferredHarvestables.Remove(potGuid);
+                    }
+                    PendingPotGuids.Remove(potGuid);
                 }
             }
         }
