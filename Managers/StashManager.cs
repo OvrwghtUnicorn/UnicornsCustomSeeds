@@ -16,8 +16,8 @@ namespace UnicornsCustomSeeds.Managers
     {
         private static Dictionary<string, List<PropertyItemDefinition>> ingredientsCache = new Dictionary<string, List<PropertyItemDefinition>>();
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
+        private static float lastClosedTime = 0f;
         public static SupplierStash albertsStash;
-        public static bool onClosedExecuting = false;
         
         // Constants for Albert's Stash requirements
         public static MelonPreferences_Category ConfigCategory;
@@ -43,21 +43,25 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("Alberts Ready to Synthesize");
                     albertsStash = stash;
                     stash.Storage.onClosed += (Action) AlbertsStashClosed;
+                    break;
                 }
             }
         }
 
         public static void AlbertsStashClosed()
         {
-            if(onClosedExecuting) return;
-            onClosedExecuting = true;
+            if (UnityEngine.Time.time - lastClosedTime < 1.0f) return;
+            lastClosedTime = UnityEngine.Time.time;
+
+            Utility.Log("Alberts Stash Closed");
+            
             ItemSlot cashSlot = null;
             CashInstance cashInstance = null;
 
             ItemSlot weedSlot = null;
             WeedInstance weedInstance = null;
             var items = albertsStash.Storage.GetAllItems();
-
+            Utility.Log("Alberts Stash Looping through items");
             foreach (var slot in albertsStash.Storage.ItemSlots) {
                 if (slot?.ItemInstance == null) {
                     continue;
@@ -113,7 +117,6 @@ namespace UnicornsCustomSeeds.Managers
                     }
                 }
             }
-            onClosedExecuting = false;
         }
 
         private static uint PackageAmount(string packaging)

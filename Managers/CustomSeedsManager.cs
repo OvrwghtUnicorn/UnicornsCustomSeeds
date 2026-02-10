@@ -124,7 +124,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
             string json = JsonConvert.SerializeObject(seed);
-            string payload = "[UNISEED]" + json;
+            string payload = "[NET-JSON]" + json;
 
             var props = new GenericCol.List<string>();
             var appearance = new WeedAppearanceSettings(
@@ -139,7 +139,9 @@ namespace UnicornsCustomSeeds.Managers
 
         public static IEnumerator CreateSeed(WeedDefinition weedDef)
         {
+            Utility.Log("Waiting to create Seed");
             yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
+            Utility.Log("Creating Seed");
 
             var newSeed = factory.CreateSeedDefinition(weedDef);
 
@@ -166,10 +168,11 @@ namespace UnicornsCustomSeeds.Managers
                     config.Seed.Options.Add(newSeed);
                 }
             }
-
+            Utility.Log("Finding a Dead Drop");
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null)
             {
+                Utility.Log("Found a Dead Drop");
                 ItemInstance defaultInstance = newSeed.GetDefaultInstance();
                 defaultInstance.SetQuantity(10);
                 randomEmptyDrop.Storage.InsertItem(defaultInstance, true);
@@ -179,8 +182,10 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
+                Utility.Error("No Dead Drop found");
                 SeedQuestManager.SendMessage($"{weedDef.name} is synthesized and available in the shop");
             }
+            BroadcastCustomSeed(newSeedData);
 
         }
 

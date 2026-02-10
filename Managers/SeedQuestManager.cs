@@ -15,6 +15,8 @@ namespace UnicornsCustomSeeds.Managers
         public static string messageId = "Synthesize Seeds";
         public static bool HasActiveQuest => S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") != null;
 
+        private static float lastSentTime = 0f;
+
         public static void Init()
         {
             var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
@@ -34,6 +36,11 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void OnSent()
         {
+            if (UnityEngine.Time.time - lastSentTime < 1f)
+            {
+                Utility.Log("Double send?");
+                return;
+            }
             List<string> messages = new List<string>();
             messages.Add("Drop the weed mix and cash in my drop box.");
             ConversationManager.SendMessageChain("Albert", messages);

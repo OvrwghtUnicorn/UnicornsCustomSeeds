@@ -21,35 +21,10 @@ namespace UnicornsCustomSeeds.Managers
             public int Index;
             public bool Active;
         }
-
-        public static Dictionary<string, List<DeferredSeedData>> seedsToLoad = new Dictionary<string, List<DeferredSeedData>>();
-
         public static bool IsReplaying = false;
 
-        private static MethodInfo _rpcLogicMethod;
-
-        private static MethodInfo RpcLogicMethod
-        {
-            get
-            {
-                if (_rpcLogicMethod == null)
-                {
-                    _rpcLogicMethod = AccessTools.Method(
-                        typeof(Pot),
-                        "RpcLogic___PlantSeed_Client_4077118173");
-
-                    if (_rpcLogicMethod == null)
-                    {
-                        MelonLogger.Warning(
-                            "[CustomSeeds] Could not find RpcLogic___PlantSeed_Client_4077118173 via reflection.");
-                    }
-                }
-
-                return _rpcLogicMethod;
-            }
-        }
-
         public static HashSet<string> PendingPotGuids = new HashSet<string>();
+        public static Dictionary<string, List<DeferredSeedData>> seedsToLoad = new Dictionary<string, List<DeferredSeedData>>();
         public static Dictionary<string, List<HarvestableUpdateData>> DeferredHarvestables = new Dictionary<string, List<HarvestableUpdateData>>();
 
         public static void AddDeferredSeed(Pot pot, string seedId, float progress)
