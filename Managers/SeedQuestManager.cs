@@ -26,6 +26,10 @@ namespace UnicornsCustomSeeds.Managers
                 seedDropoff = quest;
                 IsWaitingForDropoff = true;
             }
+            else
+            {
+                IsWaitingForDropoff = false;
+            }
 
             MSGConversation convo = ConversationManager.GetConversation("Albert");
              if (convo != null)
