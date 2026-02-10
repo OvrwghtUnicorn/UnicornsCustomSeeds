@@ -127,7 +127,7 @@ namespace UnicornsCustomSeeds.Managers
                 "Brick" => 20,
                 "Jar" => 5,
                 "Baggie" => 1,
-                _ => 0,
+                _ => 1, // Fallback for loose items
             };
         }
 
