@@ -76,10 +76,7 @@ namespace UnicornsCustomSeeds
                 CustomSeedsManager.factory = new SeedFactory(baseSeed);
             }
 
-            if(StashManager.albertsStash == null)
-            {
-                StashManager.GetAlbertsStash();
-            }
+            StashManager.GetAlbertsStash();
             // When returning to the main scene clear all data structures to prevent overlap with other saves
             if (sceneName.ToLower() != "main")
             {
