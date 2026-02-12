@@ -13,7 +13,8 @@ namespace UnicornsCustomSeeds.Managers
         public static CustomSeedQuest seedDropoff;
 
         public static string messageId = "Synthesize Seeds";
-        public static bool HasActiveQuest => S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") != null;
+        public static bool IsWaitingForDropoff = false;
+        public static bool HasActiveQuest => IsWaitingForDropoff;
 
         private static float lastSentTime = 0f;
 
@@ -23,6 +24,11 @@ namespace UnicornsCustomSeeds.Managers
             if (quest != null)
             {
                 seedDropoff = quest;
+                IsWaitingForDropoff = true;
+            }
+            else
+            {
+                IsWaitingForDropoff = false;
             }
 
             MSGConversation convo = ConversationManager.GetConversation("Albert");
@@ -45,6 +51,8 @@ namespace UnicornsCustomSeeds.Managers
             messages.Add("Drop the weed mix and cash in my drop box.");
             ConversationManager.SendMessageChain("Albert", messages);
 
+            IsWaitingForDropoff = true;
+
             if (seedDropoff == null)
             {
                 seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
@@ -58,6 +66,7 @@ namespace UnicornsCustomSeeds.Managers
                 seedDropoff.Complete();
                 seedDropoff = null;
             }
+            IsWaitingForDropoff = false;
         }
 
         public static void SendMessage(string text)
