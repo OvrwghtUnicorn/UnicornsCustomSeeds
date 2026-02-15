@@ -2,9 +2,8 @@ using UnicornsCustomSeeds.SeedQuests;
 using Newtonsoft.Json;
 using Il2CppScheduleOne.Quests;
 using UnicornsCustomSeeds.Seeds;
-
-
-
+using MelonLoader;
+using System.Collections;
 
 
 #if IL2CPP
@@ -41,9 +40,6 @@ namespace UnicornsCustomSeeds.Managers
             {
                 seedDropoff = quest;
                 IsWaitingForDropoff = true;
-                if(!InstanceFinder.IsOffline)
-                    Utility.Log("Not Offline");
-                //NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null,"00000000-0000-0000-0000-000000000000", "11111111-1111-1111-1111-111111111111");
             }
             else
             {
@@ -51,12 +47,12 @@ namespace UnicornsCustomSeeds.Managers
             }
 
             MSGConversation convo = ConversationManager.GetConversation("Albert");
-             if (convo != null)
-             {
-                 MessageSenderInterface senderInterface = convo.senderInterface;
-                 SendableMessage sendable = convo.CreateSendableMessage(messageId);
-                 sendable.onSent += (Action)OnSent;
-             }
+            if (convo != null)
+            {
+                MessageSenderInterface senderInterface = convo.senderInterface;
+                SendableMessage sendable = convo.CreateSendableMessage(messageId);
+                sendable.onSent += (Action)OnSent;
+            }
         }
 
         public static void OnSent()
@@ -84,17 +80,72 @@ namespace UnicornsCustomSeeds.Managers
         public static void BroadcastCustomQuest()
         {
             ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
-            string payload = "[NET-QUEST]";
+
+            // Append config values as comma-separated string
+            string payload = $"[NET-QUEST]{StashManager.StashCostEntry.Value},{StashManager.StashQtyEntry.Value},{StashManager.SynthesizeTime.Value}";
 
             var props = new GenericCol.List<string>();
             var appearance = new WeedAppearanceSettings(
-                prodManager.DefaultWeed.MainMat.color,
-                prodManager.DefaultWeed.SecondaryMat.color,
-                prodManager.DefaultWeed.LeafMat.color,
-                prodManager.DefaultWeed.StemMat.color);
+                  prodManager.DefaultWeed.MainMat.color,
+       prodManager.DefaultWeed.SecondaryMat.color,
+                  prodManager.DefaultWeed.LeafMat.color,
+                  prodManager.DefaultWeed.StemMat.color);
 
             prodManager.CreateWeed_Server(payload, CustomSeedsManager.BASE_SEED_ID,
-                                             EDrugType.Marijuana, props, appearance);
+      EDrugType.Marijuana, props, appearance);
+        }
+
+        /// <summary>
+        /// Asynchronously creates a CustomSeedQuest with retry logic
+        /// Retries up to 5 times with 1 second delays if creation fails
+        /// </summary>
+        public static void CreateQuestAsync()
+        {
+            MelonCoroutines.Start(CreateQuestCoroutine());
+        }
+
+        private static IEnumerator CreateQuestCoroutine()
+        {
+            const int maxRetries = 5;
+            int attemptCount = 0;
+
+            while (attemptCount < maxRetries)
+            {
+                attemptCount++;
+                try
+                {
+                    // Check if quest already exists
+                    var existingQuest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                    if (existingQuest != null)
+                    {
+                        seedDropoff = existingQuest;
+                        IsWaitingForDropoff = true;
+                        yield break; // Success - exit coroutine
+                    }
+
+                    // Try to create the quest
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+
+                    if (seedDropoff != null)
+                    {
+                        IsWaitingForDropoff = true;
+                        yield break; // Success - exit coroutine
+                    }
+                }
+                catch
+                {
+                    // Silently fail - components are still initializing
+                }
+
+                // Wait 1 second before next retry
+                if (attemptCount < maxRetries)
+                {
+                    yield return new UnityEngine.WaitForSeconds(1f);
+                }
+            }
+
+            // All retries failed
+            Utility.Error($"[CreateQuestAsync] Failed to Load Quest after {maxRetries} attempts");
         }
 
         public static void CompleteQuest()
@@ -109,16 +160,16 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void SendMessage(string text)
         {
-             ConversationManager.SendMessage("Albert", text);
+            ConversationManager.SendMessage("Albert", text);
         }
 
         public static void OnSelected()
         {
-             MSGConversation convo = ConversationManager.GetConversation("Albert");
-             if (convo != null)
-             {
-                 convo.senderInterface.SetVisibility(MessageSenderInterface.EVisibility.Docked);
-             }
+            MSGConversation convo = ConversationManager.GetConversation("Albert");
+            if (convo != null)
+            {
+                convo.senderInterface.SetVisibility(MessageSenderInterface.EVisibility.Docked);
+            }
         }
     }
 }

@@ -52,7 +52,6 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void TrySpawnQueuedPlants(string seedId)
         {
-            Utility.Log($"{seedId} : {seedsToLoad[seedId].Count}");
             if (seedsToLoad.ContainsKey(seedId))
             {
                 var potsToQueue = seedsToLoad[seedId];

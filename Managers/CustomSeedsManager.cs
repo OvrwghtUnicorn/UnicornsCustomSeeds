@@ -74,7 +74,6 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (shopInterface.gameObject.name == "WeedSupplierInterface")
                 {
-                    Utility.Log("Found Weed Supplier Interface");
                     shopGo = shopInterface.gameObject;
                     Shop = shopInterface;
                     break;
@@ -161,7 +160,6 @@ namespace UnicornsCustomSeeds.Managers
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null && InstanceFinder.IsServer)
             {
-                Utility.Log("----------------------------------Creating a DEAD DROP QUEST!-----------------------");
                 ItemInstance defaultInstance = newSeed.GetDefaultInstance();
                 defaultInstance.SetQuantity(10);
                 randomEmptyDrop.Storage.InsertItem(defaultInstance, true);
@@ -263,7 +261,7 @@ namespace UnicornsCustomSeeds.Managers
                 newSeed = factory.CreateSeedDefinition(weedDef);
                 if (newSeed == null)
                 {
-                    Utility.Log("New Seed returned null?");
+                    Utility.Error("New seed not created");
                 }
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
             }

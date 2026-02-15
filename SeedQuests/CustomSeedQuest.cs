@@ -15,7 +15,6 @@ namespace UnicornsCustomSeeds.SeedQuests
     /// </summary>
     public class CustomSeedQuest : Quest
     {
-        public WeedDefinition WeedDefinition;
 
         /// <summary>
         /// The title of the quest
@@ -52,7 +51,6 @@ namespace UnicornsCustomSeeds.SeedQuests
         protected override void OnCreated()
         {
             if (QuestEntries.Count == 0) {
-                // Add quest entry: Complete objective
                 customSeedEntry = AddEntry($"Give Albert {StashManager.StashQtyEntry.Value}x of a Weed Mix and ${StashManager.StashCostEntry.Value}", poiPosition: StashManager.albertsStash.transform.position);
             }
         }

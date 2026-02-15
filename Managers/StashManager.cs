@@ -54,8 +54,6 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (UnityEngine.Time.time - lastClosedTime < 1.0f) return;
             lastClosedTime = UnityEngine.Time.time;
-
-            Utility.Log("Alberts Stash Closed");
             
             ItemSlot cashSlot = null;
             CashInstance cashInstance = null;

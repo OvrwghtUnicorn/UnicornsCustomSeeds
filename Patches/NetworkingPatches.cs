@@ -109,18 +109,44 @@ namespace UnicornsCustomSeeds.Patches
                 if (name == null)
                     return;
 
-
-                Utility.Log($"Intercepted CreateWeed RPC with name={name}, id={id}, type={type}, clientOnly={InstanceFinder.IsClientOnly}");
                 if (name.StartsWith("[NET-QUEST]") && InstanceFinder.IsClientOnly)
                 {
                     string parsed = name.Replace("[NET-QUEST]", "");
-                    Utility.Log($"Received quest RPC with data: {parsed}");
+
+                    // Parse the comma-separated values
+                    try
+                    {
+                        string[] values = parsed.Split(',');
+                        if (values.Length == 3)
+                        {
+                            if (int.TryParse(values[0], out int stashCost))
+                            {
+                                StashManager.StashCostEntry.Value = stashCost;
+                            }
+                            if (int.TryParse(values[1], out int stashQty))
+                            {
+                                StashManager.StashQtyEntry.Value = stashQty;
+                            }
+                            if (int.TryParse(values[2], out int synthesizeTime))
+                            {
+                                StashManager.SynthesizeTime.Value = synthesizeTime;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Utility.PrintException(ex);
+                    }
+
+                    if (StashManager.albertsStash == null) { 
+                        StashManager.GetAlbertsStash();
+                    }
+
                     var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
                     if (quest == null)
                     {
-                        SeedQuestManager.seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
-                        SeedQuestManager.IsWaitingForDropoff = true;
-                        Utility.Log("Created new custom seed dropoff quest");
+                        // Use async quest creation with retry logic
+                        SeedQuestManager.CreateQuestAsync();
                     }
                     return;
                 }
@@ -159,7 +185,6 @@ namespace UnicornsCustomSeeds.Patches
                         }
                     }
 
-                    Utility.Log($"Is Client? {InstanceFinder.IsClient}");
                     if (InstanceFinder.IsClient)
                     {
                         DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
@@ -197,8 +222,6 @@ namespace UnicornsCustomSeeds.Patches
 
                 if(Registry.ItemExists(seedID)) return true;
 
-                // Seed is missing on this client → defer this spawn.
-                Utility.Log($"[CustomSeeds] Deferring RPC plant spawn for pot {__instance.GUID} and seedId=" + seedID);
                 DeferredPlantsManager.AddDeferredSeed(__instance, seedID, normalizedSeedProgress);
                 return false;
             }
@@ -219,7 +242,6 @@ namespace UnicornsCustomSeeds.Patches
 
                 if (DeferredPlantsManager.PendingPotGuids.Contains(__instance.GUID.ToString()))
                 {
-                    Utility.Log($"[CustomSeeds] Deferring SetHarvestableActive for pot {__instance.GUID}, index {harvestableIndex}, active {active}");
                     DeferredPlantsManager.AddHarvestableUpdate(__instance.GUID.ToString(), harvestableIndex, active);
                     return false;
                 }
