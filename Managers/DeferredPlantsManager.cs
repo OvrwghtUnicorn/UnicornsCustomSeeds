@@ -1,9 +1,8 @@
-﻿using HarmonyLib;
-using Il2CppFishNet.Connection;
-using Il2CppScheduleOne;
+﻿#if IL2CPP
 using Il2CppScheduleOne.ObjectScripts;
-using MelonLoader;
-using System.Reflection;
+#elif MONO
+using ScheduleOne.ObjectScripts;
+#endif
 
 namespace UnicornsCustomSeeds.Managers
 {

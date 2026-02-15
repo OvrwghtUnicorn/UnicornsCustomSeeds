@@ -1,4 +1,14 @@
 ﻿using HarmonyLib;
+using MelonLoader;
+using Newtonsoft.Json;
+using UnicornsCustomSeeds.Managers;
+using UnicornsCustomSeeds.Seeds;
+using Il2CppScheduleOne.Quests;
+using UnicornsCustomSeeds.SeedQuests;
+
+
+
+#if IL2CPP
 using Il2CppFishNet;
 using Il2CppFishNet.Connection;
 using Il2CppScheduleOne;
@@ -6,18 +16,41 @@ using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.ObjectScripts;
-using Il2CppScheduleOne.Persistence.Datas;
 using Il2CppScheduleOne.Product;
-using Il2CppSystem.Collections.Generic;
-using MelonLoader;
-using Newtonsoft.Json;
-using UnicornsCustomSeeds.Managers;
-using UnicornsCustomSeeds.Seeds;
+using GenericCol = Il2CppSystem.Collections.Generic;
+# elif MONO
+using FishNet;
+using FishNet.Connection;
+using ScheduleOne;
+using ScheduleOne.DevUtilities;
+using ScheduleOne.Growing;
+using ScheduleOne.Management;
+using ScheduleOne.ObjectScripts;
+using ScheduleOne.Product;
+using GenericCol = System.Collections.Generic;
+#endif
 
 namespace UnicornsCustomSeeds.Patches
 {
     namespace UnicornsCustomSeeds.Patches
     {
+
+        [HarmonyPatch(typeof(QuestManager), nameof(QuestManager.OnSpawnServer))]
+        public static class QuestManager_OnSpawnServer_Patch
+        {
+            public static void Postfix(NetworkConnection connection)
+            {
+                if (InstanceFinder.IsServer)
+                {
+                    var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                    if (quest != null)
+                    {
+                        SeedQuestManager.BroadcastCustomQuest();
+                    }
+                }
+            }
+        }
+
         // ============================
         // SERVER → CLIENT SEND TEST
         // ============================
@@ -35,7 +68,7 @@ namespace UnicornsCustomSeeds.Patches
                 if (connection.IsHost)
                     return;
 
-                var props = new Il2CppSystem.Collections.Generic.List<string>();
+                var props = new GenericCol.List<string>();
                 var appearance = new WeedAppearanceSettings(
                     __instance.DefaultWeed.MainMat.color,
                     __instance.DefaultWeed.SecondaryMat.color,
@@ -67,7 +100,7 @@ namespace UnicornsCustomSeeds.Patches
                 string name,
                 string id,
                 EDrugType type,
-                Il2CppSystem.Collections.Generic.List<string> properties,
+                GenericCol.List<string> properties,
                 WeedAppearanceSettings appearance)
             {
                 if (id != "ogkushseed")
@@ -75,6 +108,22 @@ namespace UnicornsCustomSeeds.Patches
 
                 if (name == null)
                     return;
+
+
+                Utility.Log($"Intercepted CreateWeed RPC with name={name}, id={id}, type={type}, clientOnly={InstanceFinder.IsClientOnly}");
+                if (name.StartsWith("[NET-QUEST]") && InstanceFinder.IsClientOnly)
+                {
+                    string parsed = name.Replace("[NET-QUEST]", "");
+                    Utility.Log($"Received quest RPC with data: {parsed}");
+                    var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                    if (quest == null)
+                    {
+                        SeedQuestManager.seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+                        SeedQuestManager.IsWaitingForDropoff = true;
+                        Utility.Log("Created new custom seed dropoff quest");
+                    }
+                    return;
+                }
 
                 if (!name.StartsWith("[NET-JSON]"))
                     return;
@@ -98,7 +147,11 @@ namespace UnicornsCustomSeeds.Patches
                     {
                         try
                         {
+                            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seedData.weedId);
+                            float price = StashManager.GetIngredientCost(weedDef);
                             Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+                            CustomSeedsManager.CreateShopListing(newSeed, price);
+                            CustomSeedsManager.AddSeedToPots(newSeed);
                         }
                         catch (Exception ex)
                         {

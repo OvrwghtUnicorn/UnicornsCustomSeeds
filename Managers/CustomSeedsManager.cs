@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using System.Collections;
 using UnicornsCustomSeeds.Seeds;
 using UnityEngine;
+using Il2CppFishNet;
+
 
 #if IL2CPP
 using Il2Cpp;
@@ -139,9 +141,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static IEnumerator CreateSeed(WeedDefinition weedDef)
         {
-            Utility.Log("Waiting to create Seed");
             yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
-            Utility.Log("Creating Seed");
 
             var newSeed = factory.CreateSeedDefinition(weedDef);
 
@@ -154,25 +154,14 @@ namespace UnicornsCustomSeeds.Managers
                 baseSeedId = BASE_SEED_ID,
                 price = price,
             };
-            DiscoveredSeeds.Add(newSeed.ID, newSeedData);
+            DiscoveredSeeds.Add(newSeedData.weedId, newSeedData);
             CreateShopListing(newSeed, price);
+            AddSeedToPots(newSeed);
 
-            var pots = GameObject.FindObjectsOfType<Pot>();
-            foreach ( Pot pot in pots)
-            {
-#if IL2CPP
-                if (pot.Configuration.TryCast<PotConfiguration>() is PotConfiguration config) {
-#elif MONO
-                if (pot.Configuration is PotConfiguration config) {
-#endif
-                    config.Seed.Options.Add(newSeed);
-                }
-            }
-            Utility.Log("Finding a Dead Drop");
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
-            if (randomEmptyDrop != null)
+            if (randomEmptyDrop != null && InstanceFinder.IsServer)
             {
-                Utility.Log("Found a Dead Drop");
+                Utility.Log("----------------------------------Creating a DEAD DROP QUEST!-----------------------");
                 ItemInstance defaultInstance = newSeed.GetDefaultInstance();
                 defaultInstance.SetQuantity(10);
                 randomEmptyDrop.Storage.InsertItem(defaultInstance, true);
@@ -237,6 +226,22 @@ namespace UnicornsCustomSeeds.Managers
             Shop.RefreshShownItems();
         }
 
+        public static void AddSeedToPots(SeedDefinition newSeed)
+        {
+            var pots = GameObject.FindObjectsOfType<Pot>();
+            foreach (Pot pot in pots)
+            {
+#if IL2CPP
+                if (pot.Configuration.TryCast<PotConfiguration>() is PotConfiguration config)
+                {
+#elif MONO
+                if (pot.Configuration is PotConfiguration config) {
+#endif
+                    config.Seed.Options.Add(newSeed);
+                }
+            }
+        }
+
         public static void SeedFactoryLoader()
         {
             var baseSeed = Registry.GetItem<SeedDefinition>("ogkushseed");
@@ -261,7 +266,6 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("New Seed returned null?");
                 }
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
-                //DiscoveredSeeds.Add(newSeed.ID, newSeedData);
             }
             else
             {

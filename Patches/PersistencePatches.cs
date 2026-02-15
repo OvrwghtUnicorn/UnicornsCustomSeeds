@@ -3,7 +3,6 @@ using MelonLoader;
 using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
-using Il2CppFishNet;
 
 
 #if IL2CPP

@@ -1,13 +1,16 @@
 using System.Collections;
 using UnityEngine;
 using MelonLoader;
+
 #if IL2CPP
+using Il2CppFishNet;
 using Il2CppScheduleOne.Dialogue;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.UI.Phone.Messages;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
 using Il2CppScheduleOne.NPCs.Relation;
 #elif MONO
+using FishNet;
 using ScheduleOne.Dialogue;
 using ScheduleOne.Messaging;
 using ScheduleOne.UI.Phone.Messages;
@@ -95,6 +98,8 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void SendMessage(string characterName, string text)
         {
+            if (!InstanceFinder.IsServer) return; // Only send messages from the server to ensure they are properly synced to clients
+
             if (Conversations.TryGetValue(characterName, out var convo))
             {
                 if (convo != null)
@@ -110,6 +115,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void SendMessageChain(string characterName, System.Collections.Generic.List<string> messages)
         {
+            if (!InstanceFinder.IsServer) return; // Only send messages from the server to ensure they are properly synced to clients
             if (Conversations.TryGetValue(characterName, out var convo))
             {
                 if (convo != null)

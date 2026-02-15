@@ -1,10 +1,26 @@
 using UnicornsCustomSeeds.SeedQuests;
+using Newtonsoft.Json;
+using Il2CppScheduleOne.Quests;
+using UnicornsCustomSeeds.Seeds;
+
+
+
+
+
 #if IL2CPP
+using Il2CppFishNet;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.UI.Phone.Messages;
+using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Product;
+using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
+using FishNet;
 using ScheduleOne.Messaging;
 using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.DevUtilities;
+using ScheduleOne.Product;
+using GenericCol = System.Collections.Generic;
 #endif
 namespace UnicornsCustomSeeds.Managers
 {
@@ -25,6 +41,9 @@ namespace UnicornsCustomSeeds.Managers
             {
                 seedDropoff = quest;
                 IsWaitingForDropoff = true;
+                if(!InstanceFinder.IsOffline)
+                    Utility.Log("Not Offline");
+                //NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null,"00000000-0000-0000-0000-000000000000", "11111111-1111-1111-1111-111111111111");
             }
             else
             {
@@ -42,21 +61,40 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void OnSent()
         {
-            if (UnityEngine.Time.time - lastSentTime < 1f)
+            if (InstanceFinder.IsServer)
             {
-                Utility.Log("Double send?");
-                return;
-            }
-            List<string> messages = new List<string>();
-            messages.Add("Drop the weed mix and cash in my drop box.");
-            ConversationManager.SendMessageChain("Albert", messages);
+                if (UnityEngine.Time.time - lastSentTime < 1f)
+                {
+                    return;
+                }
+                List<string> messages = new List<string>();
+                messages.Add("Drop the weed mix and cash in my drop box.");
+                ConversationManager.SendMessageChain("Albert", messages);
 
-            IsWaitingForDropoff = true;
+                IsWaitingForDropoff = true;
 
-            if (seedDropoff == null)
-            {
-                seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+                if (seedDropoff == null)
+                {
+                    if (InstanceFinder.IsServer) BroadcastCustomQuest();
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+                }
             }
+        }
+
+        public static void BroadcastCustomQuest()
+        {
+            ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
+            string payload = "[NET-QUEST]";
+
+            var props = new GenericCol.List<string>();
+            var appearance = new WeedAppearanceSettings(
+                prodManager.DefaultWeed.MainMat.color,
+                prodManager.DefaultWeed.SecondaryMat.color,
+                prodManager.DefaultWeed.LeafMat.color,
+                prodManager.DefaultWeed.StemMat.color);
+
+            prodManager.CreateWeed_Server(payload, CustomSeedsManager.BASE_SEED_ID,
+                                             EDrugType.Marijuana, props, appearance);
         }
 
         public static void CompleteQuest()
