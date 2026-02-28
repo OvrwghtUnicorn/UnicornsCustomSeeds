@@ -32,222 +32,221 @@ using GenericCol = System.Collections.Generic;
 
 namespace UnicornsCustomSeeds.Patches
 {
-    namespace UnicornsCustomSeeds.Patches
-    {
 
-        [HarmonyPatch(typeof(QuestManager), nameof(QuestManager.OnSpawnServer))]
-        public static class QuestManager_OnSpawnServer_Patch
+    [HarmonyPatch(typeof(QuestManager), nameof(QuestManager.OnSpawnServer))]
+    public static class QuestManager_OnSpawnServer_Patch
+    {
+        public static void Postfix(NetworkConnection connection)
         {
-            public static void Postfix(NetworkConnection connection)
+            if (InstanceFinder.IsServer)
             {
-                if (InstanceFinder.IsServer)
+                var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                if (quest != null)
                 {
-                    var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
-                    if (quest != null)
+                    SeedQuestManager.BroadcastCustomQuest();
+                }
+            }
+        }
+    }
+
+    // ============================
+    // SERVER → CLIENT SEND TEST
+    // ============================
+    [HarmonyPatch(typeof(ProductManager), nameof(ProductManager.OnSpawnServer))]
+    public static class ProductManager_OnSpawnServer_NetTest
+    {
+        public static void Postfix(ProductManager __instance, NetworkConnection connection)
+        {
+            if (connection == null)
+                return;
+
+            if (!InstanceFinder.IsServer)
+                return;
+
+            if (connection.IsHost)
+                return;
+
+            var props = new GenericCol.List<string>();
+            var appearance = new WeedAppearanceSettings(
+                __instance.DefaultWeed.MainMat.color,
+                __instance.DefaultWeed.SecondaryMat.color,
+                __instance.DefaultWeed.LeafMat.color,
+                __instance.DefaultWeed.StemMat.color);
+
+            foreach (var seed in CustomSeedsManager.DiscoveredSeeds)
+            {
+                //Utility.Log($"requesting to create {seed.Value.seedId}");
+                __instance.CreateWeed_Server(
+                    "[NET-JSON]" + JsonConvert.SerializeObject(seed.Value, Formatting.None),
+                    "ogkushseed",
+                    EDrugType.Marijuana,
+                    props,
+                    appearance);
+            }
+        }
+    }
+
+    // ============================
+    // CLIENT/SERVER RECEIVE TEST
+    // ============================
+    [HarmonyPatch(typeof(ProductManager), "RpcLogic___CreateWeed_1777266891")]
+    public static class ProductManager_RpcLogic_CreateWeed_NetTest
+    {
+        public static void Postfix(
+            ProductManager __instance,
+            NetworkConnection conn,
+            string name,
+            string id,
+            EDrugType type,
+            GenericCol.List<string> properties,
+            WeedAppearanceSettings appearance)
+        {
+            if (id != "ogkushseed")
+                return;
+
+            if (name == null)
+                return;
+
+            if (name.StartsWith("[NET-QUEST]") && InstanceFinder.IsClientOnly)
+            {
+                string parsed = name.Replace("[NET-QUEST]", "");
+
+                // Parse the comma-separated values
+                try
+                {
+                    string[] values = parsed.Split(',');
+                    if (values.Length == 3)
                     {
-                        SeedQuestManager.BroadcastCustomQuest();
+                        if (int.TryParse(values[0], out int stashCost))
+                        {
+                            StashManager.StashCostEntry.Value = stashCost;
+                        }
+                        if (int.TryParse(values[1], out int stashQty))
+                        {
+                            StashManager.StashQtyEntry.Value = stashQty;
+                        }
+                        if (int.TryParse(values[2], out int synthesizeTime))
+                        {
+                            StashManager.SynthesizeTime.Value = synthesizeTime;
+                        }
                     }
                 }
-            }
-        }
-
-        // ============================
-        // SERVER → CLIENT SEND TEST
-        // ============================
-        [HarmonyPatch(typeof(ProductManager), nameof(ProductManager.OnSpawnServer))]
-        public static class ProductManager_OnSpawnServer_NetTest
-        {
-            public static void Postfix(ProductManager __instance, NetworkConnection connection)
-            {
-                if (connection == null)
-                    return;
-
-                if (!InstanceFinder.IsServer)
-                    return;
-
-                if (connection.IsHost)
-                    return;
-
-                var props = new GenericCol.List<string>();
-                var appearance = new WeedAppearanceSettings(
-                    __instance.DefaultWeed.MainMat.color,
-                    __instance.DefaultWeed.SecondaryMat.color,
-                    __instance.DefaultWeed.LeafMat.color,
-                    __instance.DefaultWeed.StemMat.color);
-
-                foreach (var seed in CustomSeedsManager.DiscoveredSeeds)
+                catch (Exception ex)
                 {
-                    //Utility.Log($"requesting to create {seed.Value.seedId}");
-                    __instance.CreateWeed_Server(
-                        "[NET-JSON]" + JsonConvert.SerializeObject(seed.Value, Formatting.None),
-                        "ogkushseed",
-                        EDrugType.Marijuana,
-                        props,
-                        appearance);
+                    Utility.PrintException(ex);
                 }
-            }
-        }
 
-        // ============================
-        // CLIENT/SERVER RECEIVE TEST
-        // ============================
-        [HarmonyPatch(typeof(ProductManager), "RpcLogic___CreateWeed_1777266891")]
-        public static class ProductManager_RpcLogic_CreateWeed_NetTest
-        {
-            public static void Postfix(
-                ProductManager __instance,
-                NetworkConnection conn,
-                string name,
-                string id,
-                EDrugType type,
-                GenericCol.List<string> properties,
-                WeedAppearanceSettings appearance)
-            {
-                if (id != "ogkushseed")
-                    return;
-
-                if (name == null)
-                    return;
-
-                if (name.StartsWith("[NET-QUEST]") && InstanceFinder.IsClientOnly)
+                if (StashManager.albertsStash == null)
                 {
-                    string parsed = name.Replace("[NET-QUEST]", "");
+                    StashManager.GetAlbertsStash();
+                }
 
-                    // Parse the comma-separated values
+                var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                if (quest == null)
+                {
+                    // Use async quest creation with retry logic
+                    SeedQuestManager.CreateQuestAsync();
+                }
+                return;
+            }
+
+            if (!name.StartsWith("[NET-JSON]"))
+                return;
+
+            string serializedString = name.Replace("[NET-JSON]", "");
+            try
+            {
+                UnicornSeedData seedData = JsonConvert.DeserializeObject<UnicornSeedData>(serializedString);
+                if (Registry.ItemExists(seedData.seedId))
+                {
+                    return;
+                }
+
+                if (!CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
+                {
+                    CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);
+                }
+
+                SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(seedData);
+                if (newSeed != null)
+                {
                     try
                     {
-                        string[] values = parsed.Split(',');
-                        if (values.Length == 3)
-                        {
-                            if (int.TryParse(values[0], out int stashCost))
-                            {
-                                StashManager.StashCostEntry.Value = stashCost;
-                            }
-                            if (int.TryParse(values[1], out int stashQty))
-                            {
-                                StashManager.StashQtyEntry.Value = stashQty;
-                            }
-                            if (int.TryParse(values[2], out int synthesizeTime))
-                            {
-                                StashManager.SynthesizeTime.Value = synthesizeTime;
-                            }
-                        }
+                        WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seedData.weedId);
+                        float price = StashManager.GetIngredientCost(weedDef);
+                        Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+                        CustomSeedsManager.CreateShopListing(newSeed, price);
+                        CustomSeedsManager.AddSeedToPots(newSeed);
                     }
                     catch (Exception ex)
                     {
                         Utility.PrintException(ex);
                     }
-
-                    if (StashManager.albertsStash == null) { 
-                        StashManager.GetAlbertsStash();
-                    }
-
-                    var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
-                    if (quest == null)
-                    {
-                        // Use async quest creation with retry logic
-                        SeedQuestManager.CreateQuestAsync();
-                    }
-                    return;
                 }
 
-                if (!name.StartsWith("[NET-JSON]"))
-                    return;
-
-                string serializedString = name.Replace("[NET-JSON]", "");
-                try
+                if (InstanceFinder.IsClient)
                 {
-                    UnicornSeedData seedData = JsonConvert.DeserializeObject<UnicornSeedData>(serializedString);
-                    if (Registry.ItemExists(seedData.seedId))
-                    {
-                        return;
-                    }
-
-                    if (!CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
-                    {
-                        CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);
-                    }
-
-                    SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(seedData);
-                    if (newSeed != null)
-                    {
-                        try
-                        {
-                            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seedData.weedId);
-                            float price = StashManager.GetIngredientCost(weedDef);
-                            Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
-                            CustomSeedsManager.CreateShopListing(newSeed, price);
-                            CustomSeedsManager.AddSeedToPots(newSeed);
-                        }
-                        catch (Exception ex)
-                        {
-                            Utility.PrintException(ex);
-                        }
-                    }
-
-                    if (InstanceFinder.IsClient)
-                    {
-                        DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
-                    }
-
+                    DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
                 }
-                catch (Exception ex) { 
-                    Utility.PrintException(ex);
-                }
+
+            }
+            catch (Exception ex)
+            {
+                Utility.PrintException(ex);
             }
         }
+    }
 
-        [HarmonyPatch(typeof(Pot),nameof(Pot.RpcLogic___PlantSeed_Client_4077118173))]
-        public static class Patch_Pot_RpcLogic___PlantSeed_Client_4077118173
+    [HarmonyPatch(typeof(Pot), nameof(Pot.RpcLogic___PlantSeed_Client_4077118173))]
+    public static class Patch_Pot_RpcLogic___PlantSeed_Client_4077118173
+    {
+        public static bool Prefix(
+        Pot __instance,
+        NetworkConnection conn,
+        string seedID,
+        float normalizedSeedProgress)
         {
-            public static bool Prefix(
-            Pot __instance,
-            NetworkConnection conn,
-            string seedID,
-            float normalizedSeedProgress)
+            // Only intercept on a pure client (joiner), not server or host.
+            if (!InstanceFinder.IsClient || InstanceFinder.IsServer)
+                return true;
+
+            // During replay we want vanilla logic to run unmodified.
+            if (DeferredPlantsManager.IsReplaying)
+                return true;
+
+            if (string.IsNullOrEmpty(seedID))
+                return true;
+
+            if (!seedID.Contains("customseeddefinition"))
+                return true;
+
+            if (Registry.ItemExists(seedID)) return true;
+
+            DeferredPlantsManager.AddDeferredSeed(__instance, seedID, normalizedSeedProgress);
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Pot), nameof(Pot.RpcLogic___SetHarvestableActive_Client_338960014))]
+    public static class Patch_Pot_RpcLogic___SetHarvestableActive_Client_338960014
+    {
+        public static bool Prefix(
+        Pot __instance,
+        NetworkConnection conn,
+        int harvestableIndex,
+        bool active)
+        {
+            // Only intercept on a pure client (joiner), not server or host.
+            if (!InstanceFinder.IsClient || InstanceFinder.IsServer)
+                return true;
+
+            if (DeferredPlantsManager.PendingPotGuids.Contains(__instance.GUID.ToString()))
             {
-                // Only intercept on a pure client (joiner), not server or host.
-                if (!InstanceFinder.IsClient || InstanceFinder.IsServer)
-                    return true;
-
-                // During replay we want vanilla logic to run unmodified.
-                if (DeferredPlantsManager.IsReplaying)
-                    return true;
-
-                if (string.IsNullOrEmpty(seedID))
-                    return true;
-
-                if (!seedID.Contains("customseeddefinition"))
-                    return true;
-
-                if(Registry.ItemExists(seedID)) return true;
-
-                DeferredPlantsManager.AddDeferredSeed(__instance, seedID, normalizedSeedProgress);
+                DeferredPlantsManager.AddHarvestableUpdate(__instance.GUID.ToString(), harvestableIndex, active);
                 return false;
             }
-        }
 
-        [HarmonyPatch(typeof(Pot), nameof(Pot.RpcLogic___SetHarvestableActive_Client_338960014))]
-        public static class Patch_Pot_RpcLogic___SetHarvestableActive_Client_338960014
-        {
-            public static bool Prefix(
-            Pot __instance,
-            NetworkConnection conn,
-            int harvestableIndex,
-            bool active)
-            {
-                // Only intercept on a pure client (joiner), not server or host.
-                if (!InstanceFinder.IsClient || InstanceFinder.IsServer)
-                    return true;
-
-                if (DeferredPlantsManager.PendingPotGuids.Contains(__instance.GUID.ToString()))
-                {
-                    DeferredPlantsManager.AddHarvestableUpdate(__instance.GUID.ToString(), harvestableIndex, active);
-                    return false;
-                }
-
-                return true;
-            }
+            return true;
         }
     }
 }

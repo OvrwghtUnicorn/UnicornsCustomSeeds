@@ -16,12 +16,12 @@
 
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
 		<TargetFramework>netstandard2.1</TargetFramework>
-		<AssemblyName>UnicornsCustomSeeds_Mono_$(FileVersion)</AssemblyName>
+		<AssemblyName>$(RootNamespace)_Mono_$(FileVersion)</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP'">
 		<TargetFramework>net6.0</TargetFramework>
-		<AssemblyName>UnicornsCustomSeeds_IL2Cpp_$(FileVersion)</AssemblyName>
+		<AssemblyName>$(RootNamespace)_IL2Cpp_$(FileVersion)</AssemblyName>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
 		<S1Dir>Q:\code\UnityModding\DepotDownloader-windows-x64\Schedule 1 alternate</S1Dir>
@@ -40,6 +40,7 @@
 		<Compile Include="Managers\ConversationManager.cs" />
 		<Compile Include="Managers\DeferredPlantsManager.cs" />
 		<Compile Include="Patches\NetworkingPatches.cs" />
+		<Compile Include="Patches\ProductManagerAppPatches.cs" />
 		<Compile Include="SeedQuests\CustomSeedQuest.cs" />
 		<Compile Include="SeedQuests\CustomSeedQuestData.cs" />
 		<Compile Include="Managers\SeedQuestManager.cs" />

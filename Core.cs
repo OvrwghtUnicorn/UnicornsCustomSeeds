@@ -3,6 +3,11 @@ using UnityEngine.Events;
 using UnicornsCustomSeeds.Seeds;
 using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
+using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
+using UnityEngine;
+using UnityEngine.UI;
+
+
 
 
 #if IL2CPP
@@ -37,6 +42,7 @@ namespace UnicornsCustomSeeds
 
         public override void OnLateInitializeMelon() {
             StashManager.InitializeConfig();
+            SeedVisualsManager.LoadSeedMaterial();
             LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
             SaveManager.Instance.onSaveComplete.AddListener((UnityAction)SaveData);
         }
@@ -66,6 +72,7 @@ namespace UnicornsCustomSeeds
         {
             CustomSeedsManager.Initialize();
             StashManager.GetAlbertsStash();
+
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)

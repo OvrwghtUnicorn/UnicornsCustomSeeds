@@ -17,6 +17,7 @@ namespace UnicornsCustomSeeds.Managers
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
+        public static Sprite seedIcon;
 
         public enum BlendMode { Lerp, Multiply, Add, Screen }
         public static BlendMode blendMode = BlendMode.Lerp;
@@ -33,7 +34,17 @@ namespace UnicornsCustomSeeds.Managers
                 if (BaseIconSprite != null)
                 {
                     baseSeedSprite = BaseIconSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(baseSeedSprite);
                 }
+
+                Sprite seedIconSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("seedicon.png", "customshaders");
+
+                if (seedIconSprite != null)
+                {
+                    seedIcon = seedIconSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(seedIcon);
+                }
+
                 Shader labelGradient = AssetBundleUtils.LoadAssetFromBundle<Shader>("labelgradient.shader", "customshaders");
                 if (labelGradient != null)
                 {
@@ -42,6 +53,7 @@ namespace UnicornsCustomSeeds.Managers
                     if (newMat != null)
                     {
                         customMat = newMat;
+                        UnityEngine.Object.DontDestroyOnLoad(labelGradient);
                     }
                 }
                 else
@@ -97,6 +109,7 @@ namespace UnicornsCustomSeeds.Managers
             copiedTexture.name = "Copy";
 
             var sprite = Sprite.Create(copiedTexture, new Rect(0, 0, newTextureWidth, newTextureHeight), new Vector2(0.5f, 0.5f));
+            
             return sprite;
         }
 
