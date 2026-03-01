@@ -18,6 +18,9 @@ namespace UnicornsCustomSeeds.Patches
 {
     public class ProductManagerAppPatches
     {
+        private static bool isPrefabInitialized = false;
+        private static List<GameObject> pendingIndicators = new List<GameObject>();
+
         [HarmonyPatch(typeof(ProductManagerApp))]
         public static class ProductManagerApp_Patch
         {
@@ -43,24 +46,23 @@ namespace UnicornsCustomSeeds.Patches
                         indicatorRect.anchorMax = new Vector2(0, 1);
                         indicatorRect.anchorMin = new Vector2(0, 1);
                     }
-                    try { 
-                        Utility.Log($"Seed icon is loaded? {SeedVisualsManager.seedIcon != null}");
-                        Image labelImage = favouriteButton.transform.GetChild(0).GetComponent<Image>();
-                        if (labelImage != null && SeedVisualsManager.seedIcon != null)
-                        {
-                            labelImage.sprite = SeedVisualsManager.seedIcon;
-                            labelImage.color = Color.white;
-                        }
-                    } catch (Exception e)
-                    {
-                        Utility.PrintException(e);
-                    }
 
+                    // Set the sprite if available, otherwise mark for later
+                    TrySetSeedIconSprite(favouriteButton);
 
                     __instance.EntryPrefab = newPrefab;
+                    isPrefabInitialized = true;
                 }
 
                 return true;
+            }
+
+            [HarmonyPostfix]
+            [HarmonyPatch(nameof(ProductManagerApp.Start))]
+            public static void StartPostfix(ProductManagerApp __instance)
+            {
+                // After Start completes, update any pending indicators
+                UpdatePendingIndicators();
             }
         }
 
@@ -75,6 +77,9 @@ namespace UnicornsCustomSeeds.Patches
                     Transform seedIndicator = __instance.transform.Find("SeedIndicator");
                     if (seedIndicator != null)
                     {
+                        // Ensure the sprite is set (handles cases where prefab wasn't updated)
+                        TrySetSeedIconSprite(seedIndicator.gameObject);
+
                         if (CustomSeedsManager.DiscoveredSeeds.ContainsKey(definition.ID))
                         {
                             seedIndicator.gameObject.SetActive(true);
@@ -87,5 +92,82 @@ namespace UnicornsCustomSeeds.Patches
                 }
             }
         }
-    }
+
+        private static void TrySetSeedIconSprite(GameObject indicatorObject)
+        {
+            try
+            {
+                // Ensure sprite is loaded
+                if (SeedVisualsManager.seedIcon == null)
+                {
+                    SeedVisualsManager.LoadSeedMaterial();
+                }
+
+                Image labelImage = indicatorObject.transform.GetChild(0).GetComponent<Image>();
+                
+                if (labelImage != null)
+                {
+                    if (SeedVisualsManager.seedIcon != null)
+                    {
+                        labelImage.sprite = SeedVisualsManager.seedIcon;
+                        labelImage.color = Color.white;
+                        Utility.Log($"Successfully set seed icon sprite");
+                    }
+                    else
+                    {
+                        // Add to pending list to retry later
+                        if (!pendingIndicators.Contains(indicatorObject))
+                        {
+                            pendingIndicators.Add(indicatorObject);
+                            Utility.Log($"Seed icon not loaded yet, added to pending list");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Utility.PrintException(e);
+            }
+        }
+
+        private static void UpdatePendingIndicators()
+        {
+            if (pendingIndicators.Count == 0) return;
+
+            Utility.Log($"Updating {pendingIndicators.Count} pending indicators");
+
+            for (int i = pendingIndicators.Count - 1; i >= 0; i--)
+            {
+                GameObject indicator = pendingIndicators[i];
+                if (indicator == null)
+                {
+                    pendingIndicators.RemoveAt(i);
+                    continue;
+                }
+
+                try
+                {
+                    Image labelImage = indicator.transform.GetChild(0).GetComponent<Image>();
+                 if (labelImage != null && SeedVisualsManager.seedIcon != null)
+     {
+labelImage.sprite = SeedVisualsManager.seedIcon;
+   labelImage.color = Color.white;
+  pendingIndicators.RemoveAt(i);
+Utility.Log($"Successfully updated pending indicator");
+       }
+       }
+         catch (Exception e)
+    {
+             Utility.PrintException(e);
+          pendingIndicators.RemoveAt(i);
+ }
+ }
+        }
+
+        public static void ClearPendingIndicators()
+        {
+        pendingIndicators.Clear();
+   isPrefabInitialized = false;
+        }
+ }
 }

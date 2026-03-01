@@ -6,6 +6,7 @@ using UnicornsCustomSeeds.Managers;
 using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
 using UnityEngine;
 using UnityEngine.UI;
+using UnicornsCustomSeeds.Patches;
 
 
 
@@ -84,11 +85,21 @@ namespace UnicornsCustomSeeds
             }
 
             StashManager.GetAlbertsStash();
+            
             // When returning to the main scene clear all data structures to prevent overlap with other saves
             if (sceneName.ToLower() != "main")
             {
                 CustomSeedsManager.ClearAll();
+                ProductManagerAppPatches.ClearPendingIndicators();
             }
-        }
+            else
+    {
+   // Reload assets when entering main scene to prevent garbage collection issues
+      if (SeedVisualsManager.seedIcon == null || SeedVisualsManager.baseSeedSprite == null)
+ {
+           SeedVisualsManager.LoadSeedMaterial();
+       }
+      }
+     }
     }
 }
