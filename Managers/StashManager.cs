@@ -1,5 +1,4 @@
 ﻿using MelonLoader;
-using Il2CppScheduleOne;
 
 
 #if IL2CPP

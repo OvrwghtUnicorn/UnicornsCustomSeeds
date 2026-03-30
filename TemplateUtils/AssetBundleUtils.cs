@@ -1,5 +1,8 @@
 ﻿using MelonLoader;
 using UnityEngine;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 #if IL2CPP
 using AssetBundle = UnityEngine.Il2CppAssetBundle;
 #elif MONO
@@ -10,9 +13,15 @@ namespace UnicornsCustomSeeds.TemplateUtils
 {
     public static class AssetBundleUtils
     {
-        static Core mod = MelonAssembly.FindMelonInstance<Core>();
-        static MelonAssembly melonAssembly = mod.MelonAssembly;
+        static Core mod;
+        static MelonAssembly melonAssembly;
         static Dictionary<string, AssetBundle> assetBundles = new Dictionary<string, AssetBundle>();
+
+        public static void Initialize(Core coreMod)
+        {
+            mod = coreMod;
+            melonAssembly = mod.MelonAssembly;
+        }
 
         public static AssetBundle LoadAssetBundle(string bundleFileName)
         {
@@ -34,10 +43,12 @@ namespace UnicornsCustomSeeds.TemplateUtils
                     bundleData = ms.ToArray();
                 }
                 Il2CppSystem.IO.Stream stream = new Il2CppSystem.IO.MemoryStream(bundleData);
+
                 AssetBundle ab = Il2CppAssetBundleManager.LoadFromStream(stream);
 #elif MONO
                 AssetBundle ab = AssetBundle.LoadFromStream(bundleStream);
 #endif
+
                 assetBundles.Add(bundleFileName, ab);
                 return ab;
             }
@@ -66,13 +77,13 @@ namespace UnicornsCustomSeeds.TemplateUtils
             var bundle = GetLoadedAssetBundle(bundleName);
             if (bundle == null)
             {
-                throw new Exception($"Bundle not found for asset: {assetName}");
+                throw new Exception($"Couldn't find {bundleName}, Did you load it?");
             }
 
             var asset = bundle.LoadAsset<T>(assetName);
-            if (bundle == null)
+            if (asset == null)
             {
-                throw new Exception($"{assetName} not found in bundle {bundleName}");
+                throw new Exception($"{assetName} not found in bundle");
             }
 
             return asset;

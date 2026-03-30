@@ -1,18 +1,14 @@
-﻿using Il2CppFishNet;
-using Il2CppFishNet.Connection;
-using HarmonyLib;
-using MelonLoader;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using HarmonyLib;
 using UnicornsCustomSeeds.Managers;
-using UnicornsCustomSeeds.SeedQuests;
-using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
-using Il2CppScheduleOne.Product;
 using UnityEngine;
 using UnityEngine.UI;
+#if IL2CPP
+using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
+using Il2CppScheduleOne.Product;
+#elif MONO
+using ScheduleOne.UI.Phone.ProductManagerApp;
+using ScheduleOne.Product;
+#endif
 
 namespace UnicornsCustomSeeds.Patches
 {
@@ -104,14 +100,13 @@ namespace UnicornsCustomSeeds.Patches
                 }
 
                 Image labelImage = indicatorObject.transform.GetChild(0).GetComponent<Image>();
-                
+
                 if (labelImage != null)
                 {
                     if (SeedVisualsManager.seedIcon != null)
                     {
                         labelImage.sprite = SeedVisualsManager.seedIcon;
                         labelImage.color = Color.white;
-                        Utility.Log($"Successfully set seed icon sprite");
                     }
                     else
                     {
@@ -134,8 +129,6 @@ namespace UnicornsCustomSeeds.Patches
         {
             if (pendingIndicators.Count == 0) return;
 
-            Utility.Log($"Updating {pendingIndicators.Count} pending indicators");
-
             for (int i = pendingIndicators.Count - 1; i >= 0; i--)
             {
                 GameObject indicator = pendingIndicators[i];
@@ -148,26 +141,25 @@ namespace UnicornsCustomSeeds.Patches
                 try
                 {
                     Image labelImage = indicator.transform.GetChild(0).GetComponent<Image>();
-                 if (labelImage != null && SeedVisualsManager.seedIcon != null)
-     {
-labelImage.sprite = SeedVisualsManager.seedIcon;
-   labelImage.color = Color.white;
-  pendingIndicators.RemoveAt(i);
-Utility.Log($"Successfully updated pending indicator");
-       }
-       }
-         catch (Exception e)
-    {
-             Utility.PrintException(e);
-          pendingIndicators.RemoveAt(i);
- }
- }
+                    if (labelImage != null && SeedVisualsManager.seedIcon != null)
+                    {
+                        labelImage.sprite = SeedVisualsManager.seedIcon;
+                        labelImage.color = Color.white;
+                        pendingIndicators.RemoveAt(i);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Utility.PrintException(e);
+                    pendingIndicators.RemoveAt(i);
+                }
+            }
         }
 
         public static void ClearPendingIndicators()
         {
-        pendingIndicators.Clear();
-   isPrefabInitialized = false;
+            pendingIndicators.Clear();
+            isPrefabInitialized = false;
         }
- }
+    }
 }

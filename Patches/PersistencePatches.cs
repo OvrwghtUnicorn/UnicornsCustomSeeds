@@ -66,7 +66,7 @@ namespace UnicornsCustomSeeds.Patches
                     return;
 
                 string filePath = Path.Combine(saveGameFolder, "DiscoveredCustomSeeds.json");
-                
+
                 List<UnicornSeedData> seedsIl2cpp = new List<UnicornSeedData>();
 
                 if (File.Exists(filePath))
@@ -121,7 +121,7 @@ namespace UnicornsCustomSeeds.Patches
                 List<string> properties,
                 WeedAppearanceSettings appearance)
         {
-            if(Registry.ItemExists(id + "_customseeddefinition"))
+            if (Registry.ItemExists(id + "_customseeddefinition"))
             {
                 return;
             }
@@ -135,15 +135,11 @@ namespace UnicornsCustomSeeds.Patches
                     {
                         Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex)
+                    {
                         Utility.PrintException(ex);
                     }
                 }
-
-                //if (InstanceFinder.IsClient && !InstanceFinder.IsServer)
-                //{
-                //    DeferredPlantsManager.TrySpawnQueuedPlants();
-                //}
             }
         }
     }

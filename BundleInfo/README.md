@@ -3,6 +3,11 @@ Unicorns Custom Seeds allows you to synthesize your custom weed mixes into seeds
 
 **This mod is not compatible with the Mod Manager Phone App by Prowiler**
 
+# Mod Overview
+ Once you have a friendly relationship with Albert Hoover you can start requesting him to synthesize seeds. To synthesize seeds you must place your weed mix and cash in alberts drop box. If you have already synthesized a weed mix albert will not accept it.
+ After a seed has been synthesized you can buy it again from Alberts shop or the Deaddrop shop.
+ Once you reach max relationship with Albert Hoover he can deliver seeds to you.
+
 # What does this mod do?
 - Create seeds for your custom weed mixes via Albert Hoover
 - Add a new color pallet to weed plants
@@ -18,9 +23,10 @@ Contact me on [Nexus](https://next.nexusmods.com/profile/OverweightUnicorn) with
 4. Error Message
 
 # Future Improvements
-- Adding Networking
-- Synthesize Quest persistence
+- Change price of seeds to be based on the market value of the mix rather than the price of ingredients
+- Custom shrooms
 - Custom cocaine seeds
+- Custom Pseudo
 - An app that enables players to remove effects
 
 # Compatible Mods

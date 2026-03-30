@@ -13,7 +13,7 @@ namespace UnicornsCustomSeeds.Managers
     {
         public static Dictionary<string, Sprite> seedIcons = new Dictionary<string, Sprite>();
         public static Dictionary<string, WeedAppearanceSettings> appearanceMap = new Dictionary<string, WeedAppearanceSettings>();
-        
+
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
@@ -109,7 +109,7 @@ namespace UnicornsCustomSeeds.Managers
             copiedTexture.name = "Copy";
 
             var sprite = Sprite.Create(copiedTexture, new Rect(0, 0, newTextureWidth, newTextureHeight), new Vector2(0.5f, 0.5f));
-            
+
             return sprite;
         }
 

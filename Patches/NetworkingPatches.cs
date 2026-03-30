@@ -1,12 +1,8 @@
 ﻿using HarmonyLib;
-using MelonLoader;
 using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
-using Il2CppScheduleOne.Quests;
 using UnicornsCustomSeeds.SeedQuests;
-
-
 
 #if IL2CPP
 using Il2CppFishNet;
@@ -17,6 +13,7 @@ using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.Quests;
 using GenericCol = Il2CppSystem.Collections.Generic;
 # elif MONO
 using FishNet;
@@ -27,6 +24,7 @@ using ScheduleOne.Growing;
 using ScheduleOne.Management;
 using ScheduleOne.ObjectScripts;
 using ScheduleOne.Product;
+using ScheduleOne.Quests;
 using GenericCol = System.Collections.Generic;
 #endif
 
@@ -177,6 +175,7 @@ namespace UnicornsCustomSeeds.Patches
                         Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
                         CustomSeedsManager.CreateShopListing(newSeed, price);
                         CustomSeedsManager.AddSeedToPots(newSeed);
+                        CustomSeedsManager.EnableSeedIndicator(seedData.weedId);
                     }
                     catch (Exception ex)
                     {

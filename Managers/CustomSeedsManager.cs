@@ -3,17 +3,12 @@ using Newtonsoft.Json;
 using System.Collections;
 using UnicornsCustomSeeds.Seeds;
 using UnityEngine;
-using Il2CppFishNet;
-using Il2CppScheduleOne.NPCs.CharacterClasses;
-using Il2CppScheduleOne.UI.Phone;
-using Harmony;
-using Il2CppScheduleOne.UI.Phone.Messages;
 using UnityEngine.UI;
-using Il2CppScheduleOne.UI.Phone.Delivery;
 using UnityEngine.Events;
 
 #if IL2CPP
 using Il2Cpp;
+using Il2CppFishNet;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Economy;
@@ -26,9 +21,14 @@ using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Quests;
 using Il2CppScheduleOne.UI.Shop;
+using Il2CppScheduleOne.UI.Phone;
+using Il2CppScheduleOne.UI.Phone.Messages;
+using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
+using Il2CppScheduleOne.UI.Phone.Delivery;
 using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
 using ScheduleOne;
+using FishNet;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Economy;
 using ScheduleOne.Growing;
@@ -40,6 +40,10 @@ using ScheduleOne.PlayerScripts;
 using ScheduleOne.Product;
 using ScheduleOne.Quests;
 using ScheduleOne.UI.Shop;
+using ScheduleOne.UI.Phone;
+using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.UI.Phone.ProductManagerApp;
+using ScheduleOne.UI.Phone.Delivery;
 using GenericCol = System.Collections.Generic;
 #endif
 
@@ -132,97 +136,6 @@ namespace UnicornsCustomSeeds.Managers
             //baseShopListing.Clear();
         }
 
-        public static void DebugPhoneInterfaceLayout()
-        {
-            var phoneShopTransform = PlayerSingleton<MessagesApp>.Instance.PhoneShopInterface.transform;
-            Transform shopEntries = phoneShopTransform.Find("Shade/Content/Entries");
-
-            if (shopEntries == null)
-            {
-                Utility.Error("Could not find Shade/Content/Entries");
-                return;
-            }
-
-            GameObject entries = shopEntries.gameObject;
-            RectTransform entriesRect = entries.GetComponent<RectTransform>();
-
-            if (entriesRect == null)
-            {
-                Utility.Error("Entries does not have a RectTransform component");
-                return;
-            }
-
-            // === ENTRIES GAMEOBJECT ===
-            Utility.Log("========== ENTRIES GAMEOBJECT ==========");
-            Utility.Log($"Name: {entries.name}");
-            Utility.Log($"AnchorMin: {entriesRect.anchorMin}");
-            Utility.Log($"AnchorMax: {entriesRect.anchorMax}");
-            Utility.Log($"Pivot: {entriesRect.pivot}");
-            Utility.Log($"AnchoredPosition: {entriesRect.anchoredPosition}");
-            Utility.Log($"SizeDelta: {entriesRect.sizeDelta}");
-            Utility.Log($"Rect: {entriesRect.rect}");
-
-            // Vertical Layout Group
-            VerticalLayoutGroup layoutGroup = entries.GetComponent<VerticalLayoutGroup>();
-            if (layoutGroup != null)
-            {
-                Utility.Log("--- Vertical Layout Group ---");
-                Utility.Log($"ChildAlignment: {layoutGroup.childAlignment}");
-                Utility.Log($"Spacing: {layoutGroup.spacing}");
-                Utility.Log($"Padding: L:{layoutGroup.padding.left} R:{layoutGroup.padding.right} T:{layoutGroup.padding.top} B:{layoutGroup.padding.bottom}");
-                Utility.Log($"ChildControlWidth: {layoutGroup.childControlWidth}");
-                Utility.Log($"ChildControlHeight: {layoutGroup.childControlHeight}");
-                Utility.Log($"ChildForceExpandWidth: {layoutGroup.childForceExpandWidth}");
-                Utility.Log($"ChildForceExpandHeight: {layoutGroup.childForceExpandHeight}");
-            }
-
-            // === PARENT GAMEOBJECT ===
-            if (entriesRect.parent != null)
-            {
-                Utility.Log("\n========== PARENT GAMEOBJECT ==========");
-                RectTransform parentRect = entriesRect.parent.GetComponent<RectTransform>();
-                if (parentRect != null)
-                {
-                    Utility.Log($"Name: {parentRect.gameObject.name}");
-                    Utility.Log($"AnchorMin: {parentRect.anchorMin}");
-                    Utility.Log($"AnchorMax: {parentRect.anchorMax}");
-                    Utility.Log($"Pivot: {parentRect.pivot}");
-                    Utility.Log($"AnchoredPosition: {parentRect.anchoredPosition}");
-                    Utility.Log($"SizeDelta: {parentRect.sizeDelta}");
-                    Utility.Log($"Rect: {parentRect.rect}");
-                }
-            }
-
-            // === FIRST CHILD GAMEOBJECT ===
-            if (entriesRect.childCount > 0)
-            {
-                Utility.Log("\n========== FIRST CHILD GAMEOBJECT ==========");
-                Transform firstChild = entriesRect.GetChild(0);
-                RectTransform firstChildRect = firstChild.GetComponent<RectTransform>();
-
-                if (firstChildRect != null)
-                {
-                    Utility.Log($"Name: {firstChild.name}");
-                    Utility.Log($"AnchorMin: {firstChildRect.anchorMin}");
-                    Utility.Log($"AnchorMax: {firstChildRect.anchorMax}");
-                    Utility.Log($"Pivot: {firstChildRect.pivot}");
-                    Utility.Log($"AnchoredPosition: {firstChildRect.anchoredPosition}");
-                    Utility.Log($"SizeDelta: {firstChildRect.sizeDelta}");
-                    Utility.Log($"Rect: {firstChildRect.rect}");
-                }
-                else
-                {
-                    Utility.Log($"First child '{firstChild.name}' does not have RectTransform");
-                }
-            }
-            else
-            {
-                Utility.Log("\n========== NO CHILDREN ==========");
-            }
-
-            Utility.Log("\n========================================");
-        }
-
         public static void AddScrollToPhoneInterface()
         {
             var phoneShopTransform = PlayerSingleton<MessagesApp>.Instance.PhoneShopInterface.transform;
@@ -294,8 +207,6 @@ namespace UnicornsCustomSeeds.Managers
 
                 // Reset entries position to top
                 entriesRect.anchoredPosition = Vector2.zero;
-
-                Utility.Log("ScrollRect successfully added to phone shop interface");
             }
             else
             {
@@ -343,6 +254,7 @@ namespace UnicornsCustomSeeds.Managers
             DiscoveredSeeds.Add(newSeedData.weedId, newSeedData);
             CreateShopListing(newSeed, price);
             AddSeedToPots(newSeed);
+            EnableSeedIndicator(newSeedData.weedId);
 
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null && InstanceFinder.IsServer)
@@ -356,8 +268,9 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                Utility.Error("No Dead Drop found");
-                SeedQuestManager.SendMessage($"{weedDef.name} is synthesized and available in the shop");
+                if(randomEmptyDrop == null)
+                    Utility.Error("No Dead Drop found");
+                SeedQuestManager.SendMessage($"Wasn't able to find a deadrop for {weedDef.name} Seed. It is synthesized and available in the shop");
             }
             BroadcastCustomSeed(newSeedData);
 
@@ -399,7 +312,6 @@ namespace UnicornsCustomSeeds.Managers
             listingEntry.onQuantityChanged.AddListener((UnityAction)albertDeliveryShop.RefreshCart);
             albertDeliveryShop.listingEntries.Add(listingEntry);
             albertDeliveryShop.ContentsContainer.sizeDelta = new Vector2(albertDeliveryShop.ContentsContainer.sizeDelta.x, 230f + (float)Math.Ceiling(albertDeliveryShop.listingEntries.Count / 2.0) * 60f);
-            Utility.Log($"SizeDelta: {albertDeliveryShop.ContentsContainer.sizeDelta}, Count: {albertDeliveryShop.listingEntries.Count}");
         }
 
         public static void CreateShopListing(SeedDefinition newSeed, float price = 10)
@@ -420,6 +332,61 @@ namespace UnicornsCustomSeeds.Managers
             Shop.CreateListingUI(newListing);
             CreateDeliveryListing(newListing);
             Shop.RefreshShownItems();
+        }
+
+        public static void EnableSeedIndicator(string weedId)
+        {
+            ProductDefinition prodDef = Registry.GetItem<ProductDefinition>(weedId);
+            if (prodDef == null)
+            {
+                Utility.Error($"Could not find ProductDefinition for weedId: {weedId}");
+                return;
+            }
+
+            var app = PlayerSingleton<ProductManagerApp>.instance;
+            if (app == null)
+            {
+                Utility.Error("ProductManagerApp instance is null");
+                return;
+            }
+
+            bool isFavourited = ProductManager.FavouritedProducts.Contains(prodDef);
+
+            // Search in regular entries
+            if (app.entries != null)
+            {
+                for (int i = 0; i < app.entries.Count; i++)
+                {
+                    ProductEntry entry = app.entries[i];
+                    if (entry != null && entry.Definition != null && entry.Definition.ID == weedId)
+                    {
+                        Transform seedIndicator = entry.transform.Find("SeedIndicator");
+                        if (seedIndicator != null)
+                        {
+                            seedIndicator.gameObject.SetActive(true);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Search in favourite entries if the product is favourited
+            if (isFavourited && app.favouriteEntries != null)
+            {
+                for (int i = 0; i < app.favouriteEntries.Count; i++)
+                {
+                    ProductEntry entry = app.favouriteEntries[i];
+                    if (entry != null && entry.Definition != null && entry.Definition.ID == weedId)
+                    {
+                        Transform seedIndicator = entry.transform.Find("SeedIndicator");
+                        if (seedIndicator != null)
+                        {
+                            seedIndicator.gameObject.SetActive(true);
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         public static void AddSeedToPots(SeedDefinition newSeed)

@@ -31,8 +31,10 @@ namespace UnicornsCustomSeeds.Managers
         {
             // Find Albert
             albert = GameObject.FindObjectOfType<Albert>();
-            if (albert != null){
-                if(albert.MSGConversation != null){
+            if (albert != null)
+            {
+                if (albert.MSGConversation != null)
+                {
                     RegisterConversation("Albert", albert.MSGConversation);
                     albertRelation = albert.RelationData;
                 }
@@ -42,10 +44,13 @@ namespace UnicornsCustomSeeds.Managers
                     if (albert.RelationData.RelationDelta >= 4f)
                     {
                         MelonCoroutines.Start(WelcomeRoutine());
-                    } else {
+                    }
+                    else
+                    {
                         DialogueDatabase db = albert.DialogueHandler.Database;
                         var generic = db.GetModule(EDialogueModule.Generic);
-                        for (var i = 0; i < generic.Entries.Count; i++) {
+                        for (var i = 0; i < generic.Entries.Count; i++)
+                        {
 #if IL2CPP
                             if (generic.Entries[i] != null && generic.Entries[i].Key == "supplier_meetings_unlocked")
 #elif MONO
@@ -134,12 +139,12 @@ namespace UnicornsCustomSeeds.Managers
                 Utility.Error($"Conversation for {characterName} not found.");
             }
         }
-        
+
         public static void AlbertWelcomeMessage(NPCRelationData.EUnlockType type, bool temp)
         {
             SendMessage("Albert", welcomeMessage);
         }
-        
+
         private static IEnumerator WelcomeRoutine()
         {
             yield return new WaitForSeconds(10f);

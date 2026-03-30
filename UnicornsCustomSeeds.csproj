@@ -23,9 +23,11 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<AssemblyName>$(RootNamespace)_IL2Cpp_$(FileVersion)</AssemblyName>
 	</PropertyGroup>
+	
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">
 		<S1Dir>Q:\code\UnityModding\DepotDownloader-windows-x64\Schedule 1 alternate</S1Dir>
 	</PropertyGroup>
+	
 	<PropertyGroup Condition="'$(Configuration)' == 'IL2CPP'">
 		<S1Dir>Z:\Steam\steamapps\common\Schedule I</S1Dir>
 	</PropertyGroup>
@@ -56,7 +58,6 @@
 		<Compile Include="Managers\StashManager.cs" />
 		<Compile Include="TemplateUtils\AssetBundleUtils.cs" />
 		<Compile Include="TemplateUtils\Utility.cs" />
-		<Folder Include="Libs\" />
 		<Folder Include="Assets\" />
 		<EmbeddedResource Include="Assets\customshaders" />
 		<!--Uncomment
@@ -69,12 +70,13 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="S1API.Forked" Version="2.9.2" />
+		<PackageReference Include="S1API.Forked" Version="3.0.0" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->
   <ItemGroup Condition="'$(Configuration)' == 'MONO'">
     <Publicize Include="Assembly-CSharp" />
+    <Publicize Include="ScheduleOne.Core" />
   </ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
@@ -90,6 +92,9 @@
   </Target>
 
 	<ItemGroup Condition="'$(Configuration)' == 'MONO'">
+		<Reference Include="ScheduleOne.Core">
+			<HintPath>$(S1Dir)\Schedule I_Data\Managed\ScheduleOne.Core.dll</HintPath>
+		</Reference>
 		<Reference Include="AeLa.EasyFeedback.Demo">
 			<HintPath>$(S1Dir)\Schedule I_Data\Managed\AeLa.EasyFeedback.Demo.dll</HintPath>
 		</Reference>
@@ -537,8 +542,8 @@
 
 	</ItemGroup>
 	<ItemGroup Condition="'$(Configuration)' == 'IL2CPP'">
-		<Reference Include="UnityEngine.Il2CppAssetBundleManager">
-			<HintPath>Libs\UnityEngine.Il2CppAssetBundleManager.dll</HintPath>
+		<Reference Include="Il2CppScheduleOne.Core">
+			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Il2CppScheduleOne.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="Assembly-CSharp-firstpass">
 			<HintPath>$(S1Dir)\MelonLoader\Il2CppAssemblies\Assembly-CSharp-firstpass.dll</HintPath>
@@ -978,7 +983,15 @@
 		<Reference Include="Il2CppInterop.Common">
 			<HintPath>$(S1Dir)\MelonLoader\net6\Il2CppInterop.Common.dll</HintPath>
 		</Reference>
-
+		<Reference Include="Il2CppInterop.Generator">
+			<HintPath>$(S1Dir)\MelonLoader\net6\Il2CppInterop.Generator.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppInterop.HarmonySupport">
+			<HintPath>$(S1Dir)\MelonLoader\net6\Il2CppInterop.HarmonySupport.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.Il2CppAssetBundleManager">
+			<HintPath>$(S1Dir)\MelonLoader\net6\UnityEngine.Il2CppAssetBundleManager.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 
 </Project>

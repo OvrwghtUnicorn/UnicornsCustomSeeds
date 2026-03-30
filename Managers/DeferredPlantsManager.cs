@@ -55,7 +55,7 @@ namespace UnicornsCustomSeeds.Managers
             if (seedsToLoad.ContainsKey(seedId))
             {
                 var potsToQueue = seedsToLoad[seedId];
-                foreach ( var data in potsToQueue)
+                foreach (var data in potsToQueue)
                 {
                     data.Pot.PlantSeed_Client(null, data.SeedId, data.Progress);
 

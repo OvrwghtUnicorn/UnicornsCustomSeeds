@@ -1,3 +1,11 @@
+# Version 1.1.0
+- Multiplayer!
+- Seed icons appear in the product manager app to show what seeds have already been synthesized
+- Seed quest can be saved and loaded in both singleplayer and multiplayer
+- Albert not taking weed mixes should be fixed
+- Can order seeds through the deaddrop menu
+- Custom seeds can be delivered by albert
+
 # Version 1.0.1
 - Added mod dll's to the zip file. 
 

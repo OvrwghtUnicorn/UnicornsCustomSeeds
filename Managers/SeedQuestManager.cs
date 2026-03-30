@@ -1,7 +1,4 @@
 using UnicornsCustomSeeds.SeedQuests;
-using Newtonsoft.Json;
-using Il2CppScheduleOne.Quests;
-using UnicornsCustomSeeds.Seeds;
 using MelonLoader;
 using System.Collections;
 
