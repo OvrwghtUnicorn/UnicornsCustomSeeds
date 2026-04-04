@@ -1,6 +1,6 @@
 ﻿using MelonLoader;
 
-namespace UnicornsCustomSeeds
+namespace UnicornsCustomSeeds.TemplateUtils
 {
     public static class Utility
     {

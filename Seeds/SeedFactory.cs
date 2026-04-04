@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using UnicornsCustomSeeds.Managers;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 #if IL2CPP
 using Il2CppScheduleOne.AvatarFramework.Equipping;

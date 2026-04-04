@@ -1,6 +1,8 @@
 using System.Collections;
 using UnityEngine;
 using MelonLoader;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 #if IL2CPP
 using Il2CppFishNet;

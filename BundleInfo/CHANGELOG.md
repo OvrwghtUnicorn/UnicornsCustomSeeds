@@ -1,3 +1,6 @@
+# Version 1.1.1
+- Fixed bug where createseed method crashes when trying to update delivery list
+
 # Version 1.1.0
 - Multiplayer!
 - Seed icons appear in the product manager app to show what seeds have already been synthesized

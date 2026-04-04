@@ -2,6 +2,8 @@
 using UnicornsCustomSeeds.Managers;
 using UnityEngine;
 using UnityEngine.UI;
+using UnicornsCustomSeeds.TemplateUtils;
+
 #if IL2CPP
 using Il2CppScheduleOne.UI.Phone.ProductManagerApp;
 using Il2CppScheduleOne.Product;

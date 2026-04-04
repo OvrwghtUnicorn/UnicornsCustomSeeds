@@ -5,6 +5,8 @@ using UnicornsCustomSeeds.Seeds;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 #if IL2CPP
 using Il2Cpp;
@@ -311,7 +313,7 @@ namespace UnicornsCustomSeeds.Managers
             listingEntry.Initialize(newListing);
             listingEntry.onQuantityChanged.AddListener((UnityAction)albertDeliveryShop.RefreshCart);
             albertDeliveryShop.listingEntries.Add(listingEntry);
-            albertDeliveryShop.ContentsContainer.sizeDelta = new Vector2(albertDeliveryShop.ContentsContainer.sizeDelta.x, 230f + (float)Math.Ceiling(albertDeliveryShop.listingEntries.Count / 2.0) * 60f);
+            albertDeliveryShop.ListingContainer.sizeDelta = new Vector2(albertDeliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(albertDeliveryShop.listingEntries.Count / 2.0) * 60f);
         }
 
         public static void CreateShopListing(SeedDefinition newSeed, float price = 10)

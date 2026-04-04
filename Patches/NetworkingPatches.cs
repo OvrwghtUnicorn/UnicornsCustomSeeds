@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.SeedQuests;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 #if IL2CPP
 using Il2CppFishNet;

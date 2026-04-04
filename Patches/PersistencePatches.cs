@@ -3,6 +3,8 @@ using MelonLoader;
 using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 
 #if IL2CPP
