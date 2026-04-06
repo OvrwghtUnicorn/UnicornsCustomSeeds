@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MelonLoader;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
@@ -58,9 +59,6 @@ namespace UnicornsCustomSeeds.Patches
         {
             if (__instance == null || string.IsNullOrEmpty(__instance.LoadedGameFolderPath)) return;
 
-            // Create the seed factory
-            //CustomSeedsManager.SeedFactoryLoader();
-
             try
             {
                 string saveGameFolder = __instance.LoadedGameFolderPath;
@@ -74,12 +72,41 @@ namespace UnicornsCustomSeeds.Patches
                 if (File.Exists(filePath))
                 {
                     CustomSeedsManager.FirstLoad = false;
-                    // Load and deserialize directly into an IL2CPP array/list
                     string json = File.ReadAllText(filePath);
 
                     try
                     {
-                        seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
+                        JArray jArray = JArray.Parse(json);
+
+                        // Detect legacy schema: first element has "weedId" property
+                        if (jArray.Count > 0 && jArray[0] is JObject firstObj && firstObj.ContainsKey("weedId"))
+                        {
+                            // Legacy migration path
+                            var legacySeeds = JsonConvert.DeserializeObject<List<LegacySeedData>>(json) ?? new List<LegacySeedData>();
+                            Utility.Success($"Migrating {legacySeeds.Count} legacy seed records to new format");
+
+                            foreach (var legacy in legacySeeds)
+                            {
+                                seedsIl2cpp.Add(new UnicornSeedData
+                                {
+                                    seedId = legacy.seedId,
+                                    mixId = legacy.weedId,
+                                    drugType = EDrugType.Marijuana,
+                                    price = legacy.price,
+                                });
+                            }
+
+                            // Overwrite save file with new format
+                            string migratedJson = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
+                            File.WriteAllText(filePath, migratedJson);
+                            Utility.Success("Save file migrated to new format");
+                        }
+                        else
+                        {
+                            // Already new format
+                            seedsIl2cpp = JsonConvert.DeserializeObject<List<UnicornSeedData>>(json) ?? new List<UnicornSeedData>();
+                        }
+
                         Utility.Success($"Successfully loaded {seedsIl2cpp.Count} custom seeds");
                     }
                     catch (Exception ex)
@@ -96,10 +123,9 @@ namespace UnicornsCustomSeeds.Patches
 
                 foreach (UnicornSeedData seedData in seedsIl2cpp)
                 {
-                    var weedInstance = Singleton<Registry>.Instance._GetItem(seedData.weedId);
-                    if (seedData != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
+                    if (seedData != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.mixId))
                     {
-                        CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);
+                        CustomSeedsManager.DiscoveredSeeds.Add(seedData.mixId, seedData);
                     }
                 }
 

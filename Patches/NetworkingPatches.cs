@@ -162,9 +162,9 @@ namespace UnicornsCustomSeeds.Patches
                     return;
                 }
 
-                if (!CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.weedId))
+                if (!CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.mixId))
                 {
-                    CustomSeedsManager.DiscoveredSeeds.Add(seedData.weedId, seedData);
+                    CustomSeedsManager.DiscoveredSeeds.Add(seedData.mixId, seedData);
                 }
 
                 SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(seedData);
@@ -172,12 +172,12 @@ namespace UnicornsCustomSeeds.Patches
                 {
                     try
                     {
-                        WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seedData.weedId);
+                        WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seedData.mixId);
                         float price = StashManager.GetIngredientCost(weedDef);
                         Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
                         CustomSeedsManager.CreateShopListing(newSeed, price);
                         CustomSeedsManager.AddSeedToPots(newSeed);
-                        CustomSeedsManager.EnableSeedIndicator(seedData.weedId);
+                        CustomSeedsManager.EnableSeedIndicator(seedData.mixId);
                     }
                     catch (Exception ex)
                     {

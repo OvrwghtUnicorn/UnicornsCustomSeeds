@@ -105,7 +105,7 @@ namespace UnicornsCustomSeeds.Managers
 
             InitDictionary();
 
-            AddScrollToPhoneInterface();            
+            AddScrollToPhoneInterface();
 
             foreach (var seed in DiscoveredSeeds)
             {
@@ -113,14 +113,6 @@ namespace UnicornsCustomSeeds.Managers
                 if (customDef != null)
                 {
                     CreateShopListing(customDef, seed.Value.price);
-                    if (ConversationManager.albert != null)
-                    {
-                        PhoneShopInterface.Listing newSeed = new PhoneShopInterface.Listing(customDef);
-                        var updatedItems = HarmonyLib.CollectionExtensions.AddItem(ConversationManager.albert.OnlineShopItems, newSeed);
-                        ConversationManager.albert.OnlineShopItems = updatedItems.ToArray();
-
-
-                    }
                 }
             }
 
@@ -161,7 +153,7 @@ namespace UnicornsCustomSeeds.Managers
 
                 // Add RectTransform and copy dimensions from entries
                 RectTransform scrollViewRect = scrollViewGO.AddComponent<RectTransform>();
-                scrollViewRect.anchorMin = new Vector2(0,1);
+                scrollViewRect.anchorMin = new Vector2(0, 1);
                 scrollViewRect.anchorMax = new Vector2(1, 1);
                 scrollViewRect.pivot = new Vector2(0.5f, 1);
                 scrollViewRect.anchoredPosition = new Vector2(0, -140);
@@ -182,13 +174,13 @@ namespace UnicornsCustomSeeds.Managers
                 scrollRect.movementType = ScrollRect.MovementType.Clamped;
                 scrollRect.inertia = true;
                 scrollRect.scrollSensitivity = 20f;
-                
+
                 entriesRect.pivot = new Vector2(0.5f, 1);
                 //entriesRect.anchorMax = new Vector2(0.5f, 1);
                 //entriesRect.anchorMin = new Vector2(0,0.5f);
 
                 var temp = entries.AddComponent<ContentSizeFitter>();
-                if(temp != null)
+                if (temp != null)
                 {
                     temp.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                 }
@@ -249,14 +241,14 @@ namespace UnicornsCustomSeeds.Managers
             UnicornSeedData newSeedData = new UnicornSeedData
             {
                 seedId = newSeed.ID,
-                weedId = weedDef.ID,
-                baseSeedId = BASE_SEED_ID,
+                mixId = weedDef.ID,
+                drugType = EDrugType.Marijuana,
                 price = price,
             };
-            DiscoveredSeeds.Add(newSeedData.weedId, newSeedData);
+            DiscoveredSeeds.Add(newSeedData.mixId, newSeedData);
             CreateShopListing(newSeed, price);
             AddSeedToPots(newSeed);
-            EnableSeedIndicator(newSeedData.weedId);
+            EnableSeedIndicator(newSeedData.mixId);
 
             DeadDrop randomEmptyDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomEmptyDrop != null && InstanceFinder.IsServer)
@@ -270,7 +262,7 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                if(randomEmptyDrop == null)
+                if (randomEmptyDrop == null)
                     Utility.Error("No Dead Drop found");
                 SeedQuestManager.SendMessage($"Wasn't able to find a deadrop for {weedDef.name} Seed. It is synthesized and available in the shop");
             }
@@ -308,16 +300,36 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void CreateDeliveryListing(ShopListing newListing)
         {
-            var albertDeliveryShop = PlayerSingleton<DeliveryApp>.Instance.GetShop("Albert Hoover");
+            var albertDeliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop("Albert Hoover");
+            if (albertDeliveryShop == null)
+            {
+                //Utility.Log("Albert delivery shop not ready, skipping delivery listing");
+                return;
+            }
             ListingEntry listingEntry = UnityEngine.Object.Instantiate<ListingEntry>(albertDeliveryShop.ListingEntryPrefab, albertDeliveryShop.ListingContainer);
             listingEntry.Initialize(newListing);
             listingEntry.onQuantityChanged.AddListener((UnityAction)albertDeliveryShop.RefreshCart);
             albertDeliveryShop.listingEntries.Add(listingEntry);
             albertDeliveryShop.ListingContainer.sizeDelta = new Vector2(albertDeliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(albertDeliveryShop.listingEntries.Count / 2.0) * 60f);
         }
+        
+        public static void CreatePhoneShopListing(SeedDefinition customDef)
+        {
+            if (ConversationManager.albert != null)
+            {
+                PhoneShopInterface.Listing newSeed = new PhoneShopInterface.Listing(customDef);
+                var updatedItems = HarmonyLib.CollectionExtensions.AddItem(ConversationManager.albert.OnlineShopItems, newSeed);
+                ConversationManager.albert.OnlineShopItems = updatedItems.ToArray();
+            }
+        }
 
         public static void CreateShopListing(SeedDefinition newSeed, float price = 10)
         {
+            if (Shop == null)
+            {
+                //Utility.Log($"Shop not ready yet, skipping listing for {newSeed.ID}");
+                return;
+            }
             ShopListing baseListing = Shop.Listings[0];
             baseListing.name = "Test";
             ShopListing newListing = new ShopListing();
@@ -332,6 +344,7 @@ namespace UnicornsCustomSeeds.Managers
             newListing.CanBeDelivered = true;
             Shop.Listings.Add(newListing);
             Shop.CreateListingUI(newListing);
+            CreatePhoneShopListing(newSeed);
             CreateDeliveryListing(newListing);
             Shop.RefreshShownItems();
         }
@@ -419,7 +432,7 @@ namespace UnicornsCustomSeeds.Managers
         public static SeedDefinition SeedDefinitionLoader(UnicornSeedData newSeedData)
         {
             SeedDefinition newSeed = null;
-            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(newSeedData.weedId);
+            WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(newSeedData.mixId);
 
 
             if (weedDef != null)

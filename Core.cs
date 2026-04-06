@@ -6,10 +6,6 @@ using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.TemplateUtils;
 
-
-
-
-
 #if IL2CPP
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
