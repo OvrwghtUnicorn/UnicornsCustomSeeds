@@ -1,5 +1,7 @@
 ﻿using MelonLoader;
 using UnicornsCustomSeeds.TemplateUtils;
+using Il2CppScheduleOne;
+
 
 
 
@@ -19,6 +21,7 @@ namespace UnicornsCustomSeeds.Managers
     {
         private static Dictionary<string, List<PropertyItemDefinition>> ingredientsCache = new Dictionary<string, List<PropertyItemDefinition>>();
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
+        private static Dictionary<string, WeedDefinition> baseStrainCache = new Dictionary<string, WeedDefinition>();
         private static float lastClosedTime = 0f;
         public static SupplierStash albertsStash;
         
@@ -132,19 +135,54 @@ namespace UnicornsCustomSeeds.Managers
             };
         }
 
+        public static float GetSeedPrice(ProductDefinition product)
+        {
+            float seedPrice = GetIngredientCost(product);
+            WeedDefinition baseStrain = GetBaseStrain(product);
+            if (baseStrain != null) { 
+                seedPrice += baseStrain.BasePurchasePrice;
+            }
+            return seedPrice;
+        }
+
         public static WeedDefinition GetBaseStrain(ProductDefinition product)
         {
+            if (baseStrainCache.TryGetValue(product.ID, out var cached))
+                return cached;
+
             var ingredients = GetRecipe(product);
+            if (ingredients == null || ingredients.Count == 0)
+                return null;
+
             var rawBaseStrain = ingredients[0];
 
 #if IL2CPP
             WeedDefinition weedDefinition = rawBaseStrain.TryCast<WeedDefinition>();
 #elif MONO
-            WeedDefinition weedDefinition = (WeedDefinition) rawBaseStrain;
+            WeedDefinition weedDefinition = rawBaseStrain as WeedDefinition;
 #endif
 
-            if ( weedDefinition != null ) { return weedDefinition; }
+            if (weedDefinition != null)
+            {
+                baseStrainCache[product.ID] = weedDefinition;
+                return weedDefinition;
+            }
             return null;
+        }
+
+        public static WeedDefinition GetBaseStrain(string weedId)
+        {
+            if (baseStrainCache.TryGetValue(weedId, out var cached))
+                return cached;
+
+            var product = Registry.GetItem<ProductDefinition>(weedId);
+            if (product == null)
+            {
+                Utility.Error($"GetBaseStrain: no ProductDefinition found for weedId '{weedId}'");
+                return null;
+            }
+
+            return GetBaseStrain(product);
         }
 
         public static List<PropertyItemDefinition> GetRecipe(ProductDefinition product)
@@ -172,6 +210,23 @@ namespace UnicornsCustomSeeds.Managers
 
             float totalCost = CalculateTotalCost(ingredients);
 
+            if (!ingredientCostCache.ContainsKey(product.ID))
+                ingredientCostCache.Add(product.ID, totalCost);
+
+            if (ingredients.Count > 0 && !baseStrainCache.ContainsKey(product.ID))
+            {
+                var rawBaseStrain = ingredients[0];
+#if IL2CPP
+                WeedDefinition baseStrain = rawBaseStrain.TryCast<WeedDefinition>();
+#elif MONO
+                WeedDefinition baseStrain = rawBaseStrain as WeedDefinition;
+#endif
+                if (baseStrain != null)
+                {
+                    baseStrainCache[product.ID] = baseStrain;
+                    Utility.Log($"Base strain for {product.ID}: {baseStrain.ID}");
+                }
+            }
         }
 
         private static float CalculateTotalCost(List<PropertyItemDefinition> ingredients)

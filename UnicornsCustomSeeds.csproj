@@ -40,6 +40,7 @@
 	<ItemGroup>
 		<Compile Include="Core.cs" />
 		<Compile Include="Managers\ConversationManager.cs" />
+		<Compile Include="Managers\CustomShroomsManager.cs" />
 		<Compile Include="Managers\DeferredPlantsManager.cs" />
 		<Compile Include="Patches\NetworkingPatches.cs" />
 		<Compile Include="Patches\ProductManagerAppPatches.cs" />
@@ -50,6 +51,7 @@
 		<Compile Include="Patches\AddRecipePatch.cs" />
 		<!--<Compile Include="Patches\NetworkingPatches.cs.bak" />-->
 		<Compile Include="Patches\SendableMessagePatch.cs" />
+		<Compile Include="Seeds\SyringeFactory.cs" />
 		<Compile Include="Seeds\UnicornSeedData.cs" />
 		<Compile Include="Managers\CustomSeedsManager.cs" />
 		<Compile Include="Patches\PersistencePatches.cs" />

@@ -5,6 +5,10 @@ VisualStudioVersion = 17.14.36408.4
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnicornsCustomSeeds", "UnicornsCustomSeeds.csproj", "{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "..\..\dnSpy-net-win64\ScheduleOne\Assembly-CSharp\Assembly-CSharp.csproj", "{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScheduleOne.Core", "..\..\dnSpy-net-win64\ScheduleOne\ScheduleOne.Core\ScheduleOne.Core.csproj", "{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		IL2CPP|Any CPU = IL2CPP|Any CPU
@@ -15,6 +19,12 @@ Global
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.IL2CPP|Any CPU.Build.0 = IL2CPP|Any CPU
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|Any CPU.ActiveCfg = MONO|Any CPU
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|Any CPU.Build.0 = MONO|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0B}.IL2CPP|Any CPU.ActiveCfg = Release|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0B}.MONO|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0B}.MONO|Any CPU.Build.0 = Debug|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0C}.IL2CPP|Any CPU.ActiveCfg = Release|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0C}.MONO|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C79F3DF-10A1-4091-B2CE-9B9B2255CC0C}.MONO|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

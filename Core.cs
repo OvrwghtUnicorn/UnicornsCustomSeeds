@@ -10,11 +10,13 @@ using UnicornsCustomSeeds.TemplateUtils;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
+using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Persistence;
 #elif MONO
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Growing;
+using ScheduleOne.ItemFramework;
 using ScheduleOne.Persistence;
 #endif
 
@@ -75,6 +77,7 @@ namespace UnicornsCustomSeeds
         public void InitMod()
         {
             CustomSeedsManager.Initialize();
+            CustomShroomsManager.Initialize();
             StashManager.GetAlbertsStash();
 
         }
@@ -87,12 +90,19 @@ namespace UnicornsCustomSeeds
                 CustomSeedsManager.factory = new SeedFactory(baseSeed);
             }
 
+            var baseSyringe = Registry.GetItem<SporeSyringeDefinition>(CustomShroomsManager.BASE_SYRINGE_ID);
+            if (CustomShroomsManager.factory == null && baseSyringe != null)
+            {
+                CustomShroomsManager.factory = new SyringeFactory(baseSyringe);
+            }
+
             StashManager.GetAlbertsStash();
 
             // When returning to the main scene clear all data structures to prevent overlap with other saves
             if (sceneName.ToLower() != "main")
             {
                 CustomSeedsManager.ClearAll();
+                CustomShroomsManager.ClearAll();
                 ProductManagerAppPatches.ClearPendingIndicators();
             }
             else
