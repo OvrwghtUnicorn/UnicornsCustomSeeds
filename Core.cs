@@ -78,8 +78,8 @@ namespace UnicornsCustomSeeds
         {
             CustomSeedsManager.Initialize();
             CustomShroomsManager.Initialize();
+            CustomCocaSeedsManager.Initialize();
             StashManager.GetAlbertsStash();
-
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
@@ -96,6 +96,20 @@ namespace UnicornsCustomSeeds
                 CustomShroomsManager.factory = new SyringeFactory(baseSyringe);
             }
 
+            // CocaFactory — requires three base definitions to be present in the Registry
+            var baseCocaSeed = Registry.GetItem<SeedDefinition>(CustomCocaSeedsManager.BASE_SEED_ID);
+            var baseCocaLeaf = Registry.GetItem<QualityItemDefinition>(CustomCocaSeedsManager.BASE_LEAF_ID);
+            var baseCocaBase = Registry.GetItem<QualityItemDefinition>(CustomCocaSeedsManager.BASE_BASE_ID);
+            if (CustomCocaSeedsManager.factory == null && baseCocaSeed != null && baseCocaLeaf != null && baseCocaBase != null)
+            {
+                CustomCocaSeedsManager.factory = new CocaFactory(baseCocaSeed, baseCocaLeaf, baseCocaBase);
+                Utility.Log("Core: CocaFactory initialized.");
+            }
+            else if (CustomCocaSeedsManager.factory == null)
+            {
+                Utility.Error($"Core: CocaFactory init failed — cocaseed={baseCocaSeed != null}, cocaleaf={baseCocaLeaf != null}, cocainebase={baseCocaBase != null}");
+            }
+
             StashManager.GetAlbertsStash();
 
             // When returning to the main scene clear all data structures to prevent overlap with other saves
@@ -103,6 +117,7 @@ namespace UnicornsCustomSeeds
             {
                 CustomSeedsManager.ClearAll();
                 CustomShroomsManager.ClearAll();
+                CustomCocaSeedsManager.ClearAll();
                 ProductManagerAppPatches.ClearPendingIndicators();
             }
             else
