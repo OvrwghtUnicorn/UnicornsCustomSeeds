@@ -112,6 +112,13 @@ namespace UnicornsCustomSeeds.Managers
                 SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Value.seedId);
                 if (customDef != null)
                 {
+                    WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
+                    if (weedDef != null)
+                    {
+                        var cost = StashManager.GetIngredientCost(weedDef);
+                        seed.Value.price = cost;
+                        customDef.BasePurchasePrice = cost;
+                    }
                     CreateShopListing(customDef, seed.Value.price);
                 }
             }

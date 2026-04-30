@@ -96,6 +96,8 @@ namespace UnicornsCustomSeeds
                 CustomShroomsManager.factory = new SyringeFactory(baseSyringe);
             }
 
+            var temp = Singleton<Registry>.Instance.ItemDictionary;
+
             // CocaFactory — requires three base definitions to be present in the Registry
             var baseCocaSeed = Registry.GetItem<SeedDefinition>(CustomCocaSeedsManager.BASE_SEED_ID);
             var baseCocaLeaf = Registry.GetItem<QualityItemDefinition>(CustomCocaSeedsManager.BASE_LEAF_ID);

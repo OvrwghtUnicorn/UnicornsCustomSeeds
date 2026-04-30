@@ -1,6 +1,8 @@
 ﻿using MelonLoader;
 using UnicornsCustomSeeds.TemplateUtils;
 using Il2CppScheduleOne;
+using Il2CppScheduleOne.Growing;
+
 
 
 
@@ -21,10 +23,9 @@ namespace UnicornsCustomSeeds.Managers
     {
         private static Dictionary<string, List<PropertyItemDefinition>> ingredientsCache = new Dictionary<string, List<PropertyItemDefinition>>();
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
-        private static Dictionary<string, WeedDefinition> baseStrainCache = new Dictionary<string, WeedDefinition>();
         private static float lastClosedTime = 0f;
         public static SupplierStash albertsStash;
-        
+
         // Constants for Albert's Stash requirements
         public static MelonPreferences_Category ConfigCategory;
         public static MelonPreferences_Entry<int> StashCostEntry;
@@ -34,7 +35,7 @@ namespace UnicornsCustomSeeds.Managers
         public static void InitializeConfig()
         {
             ConfigCategory = MelonPreferences.CreateCategory("Unicorns Custom Seeds");
-            StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement","The price that Albert charges to synthesize seeds");
+            StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement", "The price that Albert charges to synthesize seeds");
             StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement", "The quantity of weed that needs to be provided of a certain mix");
             SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in secondsd that it will take for Albert to synthesize a seed");
         }
@@ -48,7 +49,7 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     Utility.Log("Alberts Ready to Synthesize");
                     albertsStash = stash;
-                    stash.Storage.onClosed += (Action) AlbertsStashClosed;
+                    stash.Storage.onClosed += (Action)AlbertsStashClosed;
                     break;
                 }
             }
@@ -58,7 +59,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (UnityEngine.Time.time - lastClosedTime < 1.0f) return;
             lastClosedTime = UnityEngine.Time.time;
-            
+
             ItemSlot cashSlot = null;
             CashInstance cashInstance = null;
 
@@ -66,8 +67,10 @@ namespace UnicornsCustomSeeds.Managers
             WeedInstance weedInstance = null;
             var items = albertsStash.Storage.GetAllItems();
             Utility.Log("Alberts Stash Looping through items");
-            foreach (var slot in albertsStash.Storage.ItemSlots) {
-                if (slot?.ItemInstance == null) {
+            foreach (var slot in albertsStash.Storage.ItemSlots)
+            {
+                if (slot?.ItemInstance == null)
+                {
                     continue;
                 }
 
@@ -108,11 +111,11 @@ namespace UnicornsCustomSeeds.Managers
 #elif MONO
                     WeedDefinition definition = (WeedDefinition)weedInstance.Definition;
 #endif
-                    if ( definition != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
+                    if (definition != null && !CustomSeedsManager.DiscoveredSeeds.ContainsKey(weedInstance.Definition.ID))
                     {
-                        if(SeedQuestManager.HasActiveQuest)
+                        if (SeedQuestManager.HasActiveQuest)
                         {
-                            weedSlot.ChangeQuantity(-(StashQtyEntry.Value/(int)packageAmount));
+                            weedSlot.ChangeQuantity(-(StashQtyEntry.Value / (int)packageAmount));
                             cashInstance.ChangeBalance(-StashCostEntry.Value);
                             SeedQuestManager.CompleteQuest();
                             SeedQuestManager.SendMessage("I will begin synthesizing the seed");
@@ -135,54 +138,19 @@ namespace UnicornsCustomSeeds.Managers
             };
         }
 
-        public static float GetSeedPrice(ProductDefinition product)
-        {
-            float seedPrice = GetIngredientCost(product);
-            WeedDefinition baseStrain = GetBaseStrain(product);
-            if (baseStrain != null) { 
-                seedPrice += baseStrain.BasePurchasePrice;
-            }
-            return seedPrice;
-        }
-
         public static WeedDefinition GetBaseStrain(ProductDefinition product)
         {
-            if (baseStrainCache.TryGetValue(product.ID, out var cached))
-                return cached;
-
             var ingredients = GetRecipe(product);
-            if (ingredients == null || ingredients.Count == 0)
-                return null;
-
             var rawBaseStrain = ingredients[0];
 
 #if IL2CPP
             WeedDefinition weedDefinition = rawBaseStrain.TryCast<WeedDefinition>();
 #elif MONO
-            WeedDefinition weedDefinition = rawBaseStrain as WeedDefinition;
+            WeedDefinition weedDefinition = (WeedDefinition) rawBaseStrain;
 #endif
 
-            if (weedDefinition != null)
-            {
-                baseStrainCache[product.ID] = weedDefinition;
-                return weedDefinition;
-            }
+            if (weedDefinition != null) { return weedDefinition; }
             return null;
-        }
-
-        public static WeedDefinition GetBaseStrain(string weedId)
-        {
-            if (baseStrainCache.TryGetValue(weedId, out var cached))
-                return cached;
-
-            var product = Registry.GetItem<ProductDefinition>(weedId);
-            if (product == null)
-            {
-                Utility.Error($"GetBaseStrain: no ProductDefinition found for weedId '{weedId}'");
-                return null;
-            }
-
-            return GetBaseStrain(product);
         }
 
         public static List<PropertyItemDefinition> GetRecipe(ProductDefinition product)
@@ -210,23 +178,6 @@ namespace UnicornsCustomSeeds.Managers
 
             float totalCost = CalculateTotalCost(ingredients);
 
-            if (!ingredientCostCache.ContainsKey(product.ID))
-                ingredientCostCache.Add(product.ID, totalCost);
-
-            if (ingredients.Count > 0 && !baseStrainCache.ContainsKey(product.ID))
-            {
-                var rawBaseStrain = ingredients[0];
-#if IL2CPP
-                WeedDefinition baseStrain = rawBaseStrain.TryCast<WeedDefinition>();
-#elif MONO
-                WeedDefinition baseStrain = rawBaseStrain as WeedDefinition;
-#endif
-                if (baseStrain != null)
-                {
-                    baseStrainCache[product.ID] = baseStrain;
-                    Utility.Log($"Base strain for {product.ID}: {baseStrain.ID}");
-                }
-            }
         }
 
         private static float CalculateTotalCost(List<PropertyItemDefinition> ingredients)
@@ -237,6 +188,12 @@ namespace UnicornsCustomSeeds.Managers
                 if (ingredient is not ProductDefinition)
                 {
                     totalCost += ingredient.BasePurchasePrice;
+                }
+
+                if(ingredient is ProductDefinition prodDef)
+                {
+                    var seed = Registry.GetItem<SeedDefinition>(prodDef.ID + "seed");
+                    totalCost += seed.BasePurchasePrice;
                 }
             }
             return totalCost;
