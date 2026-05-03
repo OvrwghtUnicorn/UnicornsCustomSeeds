@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnicornsCustomSeeds.Seeds;
+using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.TemplateUtils;
 using UnityEngine;
+using MelonLoader;
+
 
 #if IL2CPP
 using Il2CppScheduleOne;
@@ -23,22 +26,73 @@ namespace UnicornsCustomSeeds.Patches
     // Strategy: swap Cauldron.CocaineBaseDefinition on the specific instance.
     //
     // We fully replace RemoveIngredients() so we can:
-    //   1. Count every leaf type present across all ingredient slots (in
-    //      first-seen order).
+    //   1. Count every leaf type present (first-seen order for tie-breaking).
     //   2. Elect a winner: largest total quantity; first-discovered breaks ties.
     //   3. Swap CocaineBaseDefinition to the winner's custom base (or restore
     //      the vanilla base if the winner is a plain cocaleaf).
     //   4. Replicate the vanilla removal loop restricted to the winner's slots.
+    //   5. Record GUID→mixId in ActiveCookingRegistry for persistence.
     //
-    // Patch B (Postfix on FinishCookOperation) restores CocaineBaseDefinition
-    // after the cook completes so the cauldron is clean for the next cook.
+    // CauldronStartPatch restores any in-progress custom cook from
+    // ActiveCookingRegistry when a cauldron is loaded from a save.
+    //
+    // Patch B (Postfix on RpcLogic___FinishCookOperation) restores
+    // CocaineBaseDefinition and clears the ActiveCookingRegistry entry.
     // ─────────────────────────────────────────────────────────────────────────
 
     public static class CauldronBaseSwap
     {
         // Cauldron instance → original CocaineBaseDefinition to restore after cook
         public static readonly Dictionary<Cauldron, QualityItemDefinition> OriginalBase
-   = new Dictionary<Cauldron, QualityItemDefinition>();
+     = new Dictionary<Cauldron, QualityItemDefinition>();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CauldronStartPatch — restore any saved custom cook from ActiveCookingRegistry.
+    //
+    // When a save is loaded, Cauldron.Start fires before the cook timer resumes.
+    // If UnicornsActiveCooking.json recorded a custom mix for this cauldron's
+    // GUID, swap CocaineBaseDefinition now so FinishCookOperation outputs the
+    // right item even without another RemoveIngredients call.
+    // ─────────────────────────────────────────────────────────────────────────
+    [HarmonyPatch(typeof(Cauldron), "Start")]
+    public class CauldronStartPatch
+    {
+        [HarmonyPostfix]
+        public static void Postfix(Cauldron __instance)
+        {
+            if (__instance.isGhost) return;
+
+            try
+            {
+                string guid = __instance.GUID.ToString();
+                string mixId = ActiveCookingRegistry.GetMixId(guid);
+                if (mixId == null) return;
+
+                // Resolve the custom base from the Registry
+                string baseId = $"{mixId}_customcocainebase";
+                var rawBase = Registry.GetItem(baseId);
+#if IL2CPP
+                QualityItemDefinition customBase = rawBase?.TryCast<QualityItemDefinition>();
+#elif MONO
+         QualityItemDefinition customBase = rawBase as QualityItemDefinition;
+#endif
+                if (customBase == null)
+                {
+                    Utility.Error($"CauldronStartPatch: Could not resolve '{baseId}' — " +
+                             "cauldron will finish with vanilla base.");
+                    return;
+                }
+
+                if (!CauldronBaseSwap.OriginalBase.ContainsKey(__instance))
+                    CauldronBaseSwap.OriginalBase[__instance] = __instance.CocaineBaseDefinition;
+
+                __instance.CocaineBaseDefinition = customBase;
+                Utility.Log($"CauldronStartPatch: Restored custom cook '{mixId}' " +
+                         $"on cauldron '{guid}' from save.");
+            }
+            catch (Exception e) { Utility.PrintException(e); }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -52,7 +106,6 @@ namespace UnicornsCustomSeeds.Patches
             try
             {
                 // ── Phase 1: tally leaf types in first-seen order ─────────────────
-                // orderedIds preserves discovery order for tie-breaking.
                 var orderedIds = new List<string>();
                 var counts = new Dictionary<string, int>();
 
@@ -72,13 +125,11 @@ namespace UnicornsCustomSeeds.Patches
 
                 if (orderedIds.Count == 0)
                 {
-                    // Nothing in slots — let vanilla handle the no-op gracefully.
                     Utility.Error("CauldronPatches: RemoveIngredients called with empty slots.");
                     return true;
                 }
 
                 // ── Phase 2: elect winner ─────────────────────────────────────────
-                // Largest count wins; first-discovered breaks any tie.
                 string winnerId;
                 if (orderedIds.Count == 1)
                 {
@@ -93,60 +144,56 @@ namespace UnicornsCustomSeeds.Patches
                     winnerId = null;
                     foreach (string id in orderedIds)
                     {
-                        if (counts[id] == maxCount)
-                        {
-                            winnerId = id;
-                            break; // first-discovered with max count
-                        }
+                        if (counts[id] == maxCount) { winnerId = id; break; }
                     }
                 }
 
                 Utility.Log($"CauldronPatches: Elected leaf '{winnerId}' " +
-                $"(count {counts[winnerId]}) on '{__instance.name}'.");
+     $"(count {counts[winnerId]}) on '{__instance.name}'.");
 
-                // ── Phase 3: set CocaineBaseDefinition for the winner ─────────────
+                // ── Phase 3: set CocaineBaseDefinition + update ActiveCookingRegistry ──
                 if (CocaFactory.CustomLeafIdToBaseId.TryGetValue(winnerId, out string baseId))
                 {
-                    // Winner is a custom leaf — swap to its custom cocaine base.
                     var rawBase = Registry.GetItem(baseId);
 #if IL2CPP
                     QualityItemDefinition customBase = rawBase?.TryCast<QualityItemDefinition>();
 #elif MONO
-    QualityItemDefinition customBase = rawBase as QualityItemDefinition;
+         QualityItemDefinition customBase = rawBase as QualityItemDefinition;
 #endif
                     if (customBase != null)
                     {
-                        // Save original only once per cauldron so repeated cooks
-                        // don't overwrite the true vanilla value.
                         if (!CauldronBaseSwap.OriginalBase.ContainsKey(__instance))
                             CauldronBaseSwap.OriginalBase[__instance] = __instance.CocaineBaseDefinition;
 
                         __instance.CocaineBaseDefinition = customBase;
                         Utility.Log($"CauldronPatches: Swapped CocaineBaseDefinition → '{customBase.ID}'.");
+
+                        // Persist: record GUID → mixId so a save/reload can restore this
+                        if (CocaFactory.CustomBaseIdToMixId.TryGetValue(baseId, out string mixId))
+                        {
+                            ActiveCookingRegistry.Register(__instance.GUID.ToString(), mixId);
+                            Utility.Log($"CauldronPatches: Registered active cook GUID={__instance.GUID} mixId={mixId}.");
+                        }
                     }
                     else
                     {
                         Utility.Error($"CauldronPatches: Could not resolve '{baseId}' as " +
-                                  "QualityItemDefinition — vanilla base will be used.");
+                       "QualityItemDefinition — vanilla base will be used.");
                     }
                 }
                 else
                 {
-                    // Winner is a vanilla leaf — restore the original definition if
-                    // it was previously swapped (e.g. after a custom cook on the
-                    // same cauldron that never called FinishCookOperation cleanly).
+                    // Vanilla leaf winner — restore if previously swapped
                     if (CauldronBaseSwap.OriginalBase.TryGetValue(__instance, out QualityItemDefinition original))
                     {
                         __instance.CocaineBaseDefinition = original;
                         CauldronBaseSwap.OriginalBase.Remove(__instance);
-                        Utility.Log("CauldronPatches: Restored vanilla CocaineBaseDefinition " +
-                          "for vanilla leaf winner.");
+                        ActiveCookingRegistry.Unregister(__instance.GUID.ToString());
+                        Utility.Log("CauldronPatches: Restored vanilla CocaineBaseDefinition for vanilla leaf winner.");
                     }
                 }
 
                 // ── Phase 4: replicate vanilla removal — winner slots only ─────────
-                // Vanilla: consume 1 gasoline, then drain 20 leaves back-to-front,
-                // tracking the lowest quality seen.
                 __instance.LiquidSlot.ChangeQuantity(-1, false);
 
                 EQuality bestQuality = EQuality.Heavenly;
@@ -161,7 +208,7 @@ namespace UnicornsCustomSeeds.Patches
 #if IL2CPP
                     QualityItemInstance qi = slot.ItemInstance.TryCast<QualityItemInstance>();
 #elif MONO
-    QualityItemInstance qi = slot.ItemInstance as QualityItemInstance;
+   QualityItemInstance qi = slot.ItemInstance as QualityItemInstance;
 #endif
                     if (qi != null && qi.Quality < bestQuality)
                         bestQuality = qi.Quality;
@@ -172,36 +219,44 @@ namespace UnicornsCustomSeeds.Patches
                 }
 
                 __result = bestQuality;
-                return false; // skip vanilla RemoveIngredients
+                return false;
             }
             catch (Exception e)
             {
                 Utility.PrintException(e);
-                return true; // fall back to vanilla on unexpected error
+                return true;
             }
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Patch B — Postfix on FinishCookOperation().
+    // Patch B — Postfix on RpcLogic___FinishCookOperation_2166136261.
     //
-    // Vanilla has already output the item using the (possibly swapped)
-    // CocaineBaseDefinition. Restore the original so subsequent cooks on the
-    // same cauldron default to the vanilla cocaine base.
+    // Vanilla has already output the item using CocaineBaseDefinition.
+    // Restore the original value and clear the ActiveCookingRegistry entry.
     // ─────────────────────────────────────────────────────────────────────────
-    [HarmonyPatch(typeof(Cauldron), nameof(Cauldron.FinishCookOperation))]
+    [HarmonyPatch(typeof(Cauldron), nameof(Cauldron.RpcLogic___FinishCookOperation_2166136261))]
     public static class Patch_Cauldron_FinishCookOperation
     {
-        static void Postfix(Cauldron __instance)
+        public static void Postfix(Cauldron __instance)
         {
             try
             {
-                if (!CauldronBaseSwap.OriginalBase.TryGetValue(__instance, out QualityItemDefinition original))
-                    return;
+                // Restore original CocaineBaseDefinition
+                if (CauldronBaseSwap.OriginalBase.TryGetValue(__instance, out QualityItemDefinition original))
+                {
+                    __instance.CocaineBaseDefinition = original;
+                    CauldronBaseSwap.OriginalBase.Remove(__instance);
+                    Utility.Log($"CauldronPatches: Restored CocaineBaseDefinition on '{__instance.name}'.");
+                }
 
-                __instance.CocaineBaseDefinition = original;
-                CauldronBaseSwap.OriginalBase.Remove(__instance);
-                Utility.Log($"CauldronPatches: Restored CocaineBaseDefinition on '{__instance.name}'.");
+                // Clear the persistence entry — cook is done
+                string guid = __instance.GUID.ToString();
+                if (ActiveCookingRegistry.GuidToMixId.ContainsKey(guid))
+                {
+                    ActiveCookingRegistry.Unregister(guid);
+                    Utility.Log($"CauldronPatches: Cleared ActiveCookingRegistry for GUID={guid}.");
+                }
             }
             catch (Exception e) { Utility.PrintException(e); }
         }

@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.TemplateUtils;
+using Il2CppScheduleOne.ObjectScripts;
+
 
 #if IL2CPP
 using Il2CppScheduleOne;
@@ -42,6 +44,18 @@ namespace UnicornsCustomSeeds
         public override void OnInitializeMelon()
         {
             AssetBundleUtils.Initialize(this);
+            var method = typeof(Cauldron).GetMethod(
+                "RpcLogic___FinishCookOperation_2166136261",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
+            );
+
+            MelonLogger.Msg(method == null ? "METHOD NOT FOUND" : $"Found: {method}");
+
+            var patchInfo = HarmonyLib.Harmony.GetPatchInfo(method);
+            if (patchInfo == null)
+                MelonLogger.Msg("No patches applied");
+            else
+                MelonLogger.Msg($"Prefixes: {patchInfo.Prefixes.Count}, Postfixes: {patchInfo.Postfixes.Count}");
         }
 
         public override void OnLateInitializeMelon()
@@ -58,20 +72,30 @@ namespace UnicornsCustomSeeds
             {
                 string saveFolder = Singleton<LoadManager>.Instance.LoadedGameFolderPath;
                 if (string.IsNullOrEmpty(saveFolder) || !Directory.Exists(saveFolder))
-                {
                     return;
+
+                // ── DiscoveredCustomSeeds.json ────────────────────────────────────
+                {
+                    var all = new List<UnicornSeedData>();
+                    all.AddRange(CustomSeedsManager.DiscoveredSeeds.Values);
+                    all.AddRange(CustomShroomsManager.DiscoveredShrooms.Values);
+                    all.AddRange(CustomCocaSeedsManager.DiscoveredCocaSeeds.Values);
+
+                    string json = JsonConvert.SerializeObject(all, Formatting.Indented);
+                    File.WriteAllText(Path.Combine(saveFolder, "DiscoveredCustomSeeds.json"), json);
                 }
 
-                string filePath = Path.Combine(saveFolder, "DiscoveredCustomSeeds.json");
-                List<UnicornSeedData> seedsIl2cpp = CustomSeedsManager.DiscoveredSeeds.Values.ToList();
+                // ── UnicornsActiveCooking.json ────────────────────────────────────
+                {
+                    var entries = new List<UnicornsCustomSeeds.Managers.ActiveCookingEntry>();
+                    foreach (var kvp in UnicornsCustomSeeds.Managers.ActiveCookingRegistry.GuidToMixId)
+                        entries.Add(new UnicornsCustomSeeds.Managers.ActiveCookingEntry { stationGuid = kvp.Key, mixId = kvp.Value });
 
-                string json = JsonConvert.SerializeObject(seedsIl2cpp, Formatting.Indented);
-                File.WriteAllText(filePath, json);
+                    string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
+                    File.WriteAllText(Path.Combine(saveFolder, "UnicornsActiveCooking.json"), json);
+                }
             }
-            catch (Exception e)
-            {
-                Utility.PrintException(e);
-            }
+            catch (Exception e) { Utility.PrintException(e); }
         }
 
         public void InitMod()
@@ -120,6 +144,7 @@ namespace UnicornsCustomSeeds
                 CustomSeedsManager.ClearAll();
                 CustomShroomsManager.ClearAll();
                 CustomCocaSeedsManager.ClearAll();
+                UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
             }
             else

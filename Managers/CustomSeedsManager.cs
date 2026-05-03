@@ -61,7 +61,7 @@ namespace UnicornsCustomSeeds.Managers
     public static class CustomSeedsManager
     {
         public const string BASE_SEED_ID = "ogkushseed";
-
+        public static bool letsMigrate = false;
         public static SeedFactory factory;
         public static Dictionary<string, UnicornSeedData> DiscoveredSeeds = new();
 
@@ -112,12 +112,15 @@ namespace UnicornsCustomSeeds.Managers
                 SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Value.seedId);
                 if (customDef != null)
                 {
-                    WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
-                    if (weedDef != null)
+                    if (letsMigrate)
                     {
-                        var cost = StashManager.GetIngredientCost(weedDef);
-                        seed.Value.price = cost;
-                        customDef.BasePurchasePrice = cost;
+                        WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
+                        if (weedDef != null)
+                        {
+                            var cost = StashManager.GetIngredientCost(weedDef);
+                            seed.Value.price = cost;
+                            customDef.BasePurchasePrice = cost;
+                        }
                     }
                     CreateShopListing(customDef, seed.Value.price);
                 }
@@ -242,9 +245,10 @@ namespace UnicornsCustomSeeds.Managers
             yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
 
             var newSeed = factory.CreateSeedDefinition(weedDef);
+            float price = StashManager.GetIngredientCost(weedDef);
+            newSeed.BasePurchasePrice = price;
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
-            float price = StashManager.GetIngredientCost(weedDef);
             UnicornSeedData newSeedData = new UnicornSeedData
             {
                 seedId = newSeed.ID,
@@ -334,15 +338,12 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (Shop == null)
             {
-                //Utility.Log($"Shop not ready yet, skipping listing for {newSeed.ID}");
                 return;
             }
             ShopListing baseListing = Shop.Listings[0];
             baseListing.name = "Test";
             ShopListing newListing = new ShopListing();
             newListing.name = $"{newSeed.ID} (${price}) (Agriculture, )";
-            newListing.OverridePrice = true;
-            newListing.OverriddenPrice = price;
             newListing.Item = newSeed;
             newListing.IconTint = new Color(0, 0.859f, 1, 1);
             newListing.MinimumGameCreationVersion = 27;
@@ -450,6 +451,7 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     Utility.Error("New seed not created");
                 }
+                newSeed.BasePurchasePrice = newSeedData.price;
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
             }
             else

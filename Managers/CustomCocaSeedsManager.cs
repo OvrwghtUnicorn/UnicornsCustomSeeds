@@ -42,8 +42,19 @@ namespace UnicornsCustomSeeds.Managers
         public const string BASE_SEED_ID = "cocaseed";
         public const string BASE_LEAF_ID = "cocaleaf";
         public const string BASE_BASE_ID = "cocainebase";
-        // Hardcoded test target — verify this ID via Registry logging at startup
-        public const string TEST_COCAINE_MIX_ID = "bighaze";
+
+        // ?? Test mix IDs — replace placeholders with real IDs as they are discovered ??
+        // OnCocaSynthesisRequested iterates this array and synthesizes the first mix
+        // that does not yet have a coca seed in the Registry.
+        public static readonly string[] TEST_COCAINE_MIX_IDS = new string[]
+        {
+            "bighaze",        // confirmed working
+            "gorillaghost",  // placeholder
+            "lasmegma",  // placeholder
+            "hairygold",  // placeholder
+            "miraclefruit",  // placeholder
+            "afghancake",  // placeholder
+        };
 
         public static CocaFactory factory;
         public static Dictionary<string, UnicornSeedData> DiscoveredCocaSeeds = new Dictionary<string, UnicornSeedData>();
@@ -89,17 +100,35 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void OnCocaSynthesisRequested()
         {
-            // TESTING ONLY: hardcoded to TEST_COCAINE_MIX_ID
-            // Phase 2 will resolve this from the player's discovered cocaine mixes
-            // Log Registry.GetItem(TEST_COCAINE_MIX_ID)?.GetType().Name to confirm type
-            ProductDefinition cocaineDef = Registry.GetItem<ProductDefinition>(TEST_COCAINE_MIX_ID);
-            if (cocaineDef == null)
+            // Iterate the mix array and synthesize the first one not yet in the Registry.
+            ProductDefinition target = null;
+            foreach (string mixId in TEST_COCAINE_MIX_IDS)
             {
-                Utility.Error($"CustomCocaSeedsManager: Could not find ProductDefinition with ID '{TEST_COCAINE_MIX_ID}'. " +
-        "Log all Registry items at startup to find the correct cocaine mix ID.");
+                if (DiscoveredCocaSeeds.ContainsKey(mixId))
+                    continue; // already synthesized this session
+
+                if (Registry.ItemExists(mixId + "_customcocaseed"))
+                    continue; // already in Registry from a previous session
+
+                var def = Registry.GetItem<ProductDefinition>(mixId);
+                if (def == null)
+                {
+                    Utility.Log($"CustomCocaSeedsManager: Mix '{mixId}' not found in Registry — skipping.");
+                    continue;
+                }
+
+                target = def;
+                break;
+            }
+
+            if (target == null)
+            {
+                Utility.Log("CustomCocaSeedsManager: All test mixes already synthesized or not found in Registry.");
+                ConversationManager.SendMessage("Salvador", "All available coca seeds have already been synthesized.");
                 return;
             }
-            MelonCoroutines.Start(CreateCocaSeed(cocaineDef));
+
+            MelonCoroutines.Start(CreateCocaSeed(target));
         }
 
         public static IEnumerator CreateCocaSeed(ProductDefinition cocaineDef)
