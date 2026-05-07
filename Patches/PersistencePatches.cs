@@ -240,9 +240,15 @@ namespace UnicornsCustomSeeds.Patches
 
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
 
-                var customLeaf = Registry.GetItem<QualityItemDefinition>($"{id}_customcocaleaf");
+                // AddLeafToCauldrons must be called after the leaf is registered so all
+                // cauldrons in the scene accept the custom leaf in their ingredient slot filters.
+                // CreateCocaSeedDefinition registers the leaf internally, so it is available here.
+                string leafId = $"{id}_customcocaleaf";
+                var customLeaf = Registry.GetItem<QualityItemDefinition>(leafId);
                 if (customLeaf != null)
                     CocaFactory.AddLeafToCauldrons(customLeaf);
+                else
+                    Utility.Error($"Patch_ProductManager_CreateCocaine: Could not resolve leaf '{leafId}' from Registry — cauldrons will not accept this leaf.");
 
                 Utility.Log($"Patch_ProductManager_CreateCocaine: Reloaded coca seed '{newSeed.ID}'.");
             }

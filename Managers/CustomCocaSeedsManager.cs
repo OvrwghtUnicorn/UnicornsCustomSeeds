@@ -64,6 +64,11 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void Initialize()
         {
+            // Restore cauldron leaf filters for all previously discovered coca seeds.
+            // Must run before Salvador setup so filters are in place regardless of
+            // whether the player interacts with Salvador this session.
+            RestoreLeafFilters();
+
             salvador = GameObject.FindObjectOfType<Salvador>();
             if (salvador != null)
             {
@@ -200,6 +205,66 @@ namespace UnicornsCustomSeeds.Managers
             SalvadorShop = null;
             salvador = null;
             if (factory != null) factory.DeleteChildren();
+        }
+
+        /// <summary>
+        /// For every entry in DiscoveredCocaSeeds:
+        ///   - If the seed is not yet in the Registry (e.g. CreateCocaine fired before
+        /// DiscoveredCocaSeeds was populated), rebuild the full factory chain now.
+        ///   - Call AddLeafToCauldrons so every cauldron in the scene accepts the leaf.
+        ///
+        /// Called from Initialize() which runs on onLoadComplete, guaranteeing that the
+        /// factory, cauldrons, and cocaine ProductDefinitions are all available.
+        /// </summary>
+        public static void RestoreLeafFilters()
+        {
+            if (DiscoveredCocaSeeds.Count == 0) return;
+
+            if (factory == null)
+            {
+                Utility.Error("CustomCocaSeedsManager.RestoreLeafFilters: factory is null — cannot restore leaf filters.");
+                return;
+            }
+
+            foreach (var kvp in DiscoveredCocaSeeds)
+            {
+                string mixId = kvp.Key;
+
+                // Rebuild the full seed chain if it was not recreated by the CreateCocaine patch
+                // (which silently skips when DiscoveredCocaSeeds is empty at load time).
+                if (!Registry.ItemExists(mixId + "_customcocaseed"))
+                {
+                    var cocaineDef = Registry.GetItem<ProductDefinition>(mixId);
+                    if (cocaineDef == null)
+                    {
+                        Utility.Error($"CustomCocaSeedsManager.RestoreLeafFilters: ProductDefinition '{mixId}' not in Registry — skipping.");
+                        continue;
+                    }
+
+                    var newSeed = factory.CreateCocaSeedDefinition(cocaineDef);
+                    if (newSeed == null)
+                    {
+                        Utility.Error($"CustomCocaSeedsManager.RestoreLeafFilters: CreateCocaSeedDefinition returned null for '{mixId}'.");
+                        continue;
+                    }
+
+                    Singleton<Registry>.Instance.AddToRegistry(newSeed);
+                    Utility.Log($"CustomCocaSeedsManager.RestoreLeafFilters: Rebuilt seed '{newSeed.ID}'.");
+                }
+
+                // Always re-add to cauldron filters — they are runtime objects reset each load.
+                string leafId = $"{mixId}_customcocaleaf";
+                var leaf = Registry.GetItem<QualityItemDefinition>(leafId);
+                if (leaf != null)
+                {
+                    CocaFactory.AddLeafToCauldrons(leaf);
+                    Utility.Log($"CustomCocaSeedsManager.RestoreLeafFilters: Added '{leafId}' to cauldron filters.");
+                }
+                else
+                {
+                    Utility.Error($"CustomCocaSeedsManager.RestoreLeafFilters: Could not resolve '{leafId}' from Registry.");
+                }
+            }
         }
     }
 }
