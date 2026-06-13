@@ -171,9 +171,7 @@ namespace UnicornsCustomSeeds.Patches
                 return seeds;
             }
 
-            // This branch is also a migration (mixId/seedId/price -> variants), so prices
-            // must be recomputed too. Setting this false here meant a save that migrated
-            // through this path silently kept its old, under-counted prices forever.
+            // This path is part of migration, therefore letsMigrate needs to be true
             CustomSeedsManager.letsMigrate = true;
             var legacyCurrent = JsonConvert.DeserializeObject<List<LegacyUnicornSeedData>>(json) ?? new List<LegacyUnicornSeedData>();
             foreach (var l in legacyCurrent)
@@ -202,8 +200,8 @@ namespace UnicornsCustomSeeds.Patches
                     return CustomShroomsManager.BASE_SYRINGE_ID;
                 case EDrugType.Cocaine:
                     return CustomCocaSeedsManager.BASE_SEED_ID;
-                //case EDrugType.Methamphetamine:
-                //    return CustomPseudoManager.InferPseudoBaseIdFromSeedId(data.seedId);
+                case EDrugType.Methamphetamine:
+                    return CustomPseudoManager.InferPseudoBaseIdFromSeedId(data.seedId);
                 default:
                     return string.Empty;
             }
@@ -406,12 +404,12 @@ namespace UnicornsCustomSeeds.Patches
             NetworkConnection conn, string name, string id,
             EDrugType type, List<string> properties, MethAppearanceSettings appearance)
         {
-            if (Registry.ItemExists(id + "_custompseudo")) return;
-            if (!CustomPseudoManager.DiscoveredPseudoSeeds.TryGetValue(id, out var _)) return;
+            if (!CustomPseudoManager.DiscoveredPseudoSeeds.TryGetValue(id, out var data)) return;
 
             if (CustomPseudoManager.factory == null)
             {
-                Utility.Error($"Patch_ProductManager_CreateMeth: factory is null for '{id}'.");
+                // PseudoFactory is initialized slightly later from the main-scene coroutine.
+                // RestorePseudoFilters() on onLoadComplete will rebuild the pseudo variants.
                 return;
             }
 
@@ -428,7 +426,14 @@ namespace UnicornsCustomSeeds.Patches
                     return;
                 }
 
-                CustomPseudoManager.factory.CreatePseudoChain(methDef);
+                foreach (var variant in data.variants)
+                {
+                    if (Registry.ItemExists(variant.seedId))
+                        continue;
+
+                    CustomPseudoManager.factory.CreatePseudoChain(methDef, variant.baseItemId);
+                }
+
                 Utility.Log($"Patch_ProductManager_CreateMeth: Rebuilt pseudo chain for '{id}'.");
             }
             catch (Exception ex) { Utility.PrintException(ex); }

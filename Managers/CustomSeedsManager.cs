@@ -118,7 +118,6 @@ namespace UnicornsCustomSeeds.Managers
                         if (weedDef != null)
                         {
                             var cost = StashManager.GetIngredientCost(weedDef);
-
                             if (seed.Value.variants.Count > 0)
                                 seed.Value.variants[0].price = cost;
                             customDef.BasePurchasePrice = cost;

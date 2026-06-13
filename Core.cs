@@ -201,8 +201,10 @@ namespace UnicornsCustomSeeds
 
             try
             {
-                var basePseudo    = Registry.GetItem<QualityItemDefinition>(CustomPseudoManager.PSEUDO_BASE_ID);
-                var rawLiquidMeth = Registry.GetItem(CustomPseudoManager.BASE_LIQUIDMETH_ID);
+                var basePseudo     = Registry.GetItem<QualityItemDefinition>(CustomPseudoManager.PSEUDO_BASE_ID);
+                var lowPseudo      = Registry.GetItem<QualityItemDefinition>(CustomPseudoManager.PSEUDO_LO_ID);
+                var highPseudo     = Registry.GetItem<QualityItemDefinition>(CustomPseudoManager.PSEUDO_HI_ID);
+                var rawLiquidMeth  = Registry.GetItem(CustomPseudoManager.BASE_LIQUIDMETH_ID);
 #if IL2CPP
                 LiquidMethDefinition baseLiquidMeth = rawLiquidMeth?.TryCast<LiquidMethDefinition>();
 #elif MONO
@@ -218,14 +220,14 @@ namespace UnicornsCustomSeeds
                     }
                 }
 
-                if (basePseudo != null && baseLiquidMeth != null && baseRecipe != null)
+                if (basePseudo != null && lowPseudo != null && highPseudo != null && baseLiquidMeth != null && baseRecipe != null)
                 {
-                    CustomPseudoManager.factory = new PseudoFactory(basePseudo, baseLiquidMeth, baseRecipe);
+                    CustomPseudoManager.factory = new PseudoFactory(basePseudo, lowPseudo, highPseudo, baseLiquidMeth, baseRecipe);
                     Utility.Log("Core: PseudoFactory initialized.");
                 }
                 else
                 {
-                    Utility.Error($"Core: PseudoFactory init failed — pseudo={basePseudo != null}, liquidmeth={baseLiquidMeth != null}, recipe={baseRecipe != null}");
+                    Utility.Error($"Core: PseudoFactory init failed — pseudo={basePseudo != null}, lowPseudo={lowPseudo != null}, highPseudo={highPseudo != null}, liquidmeth={baseLiquidMeth != null}, recipe={baseRecipe != null}");
                 }
             }
             catch (Exception ex) { Utility.PrintException(ex); }

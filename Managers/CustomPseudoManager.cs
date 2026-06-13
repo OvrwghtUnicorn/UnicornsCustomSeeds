@@ -20,6 +20,10 @@ using Il2CppScheduleOne.NPCs.CharacterClasses;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Quests;
+using Il2CppScheduleOne.UI.Shop;
+using Il2CppScheduleOne.UI.Phone;
+using Il2CppScheduleOne.UI.Phone.Messages;
+using Il2CppScheduleOne.UI.Phone.Delivery;
 #elif MONO
 using FishNet;
 using ScheduleOne;
@@ -31,32 +35,28 @@ using ScheduleOne.NPCs.CharacterClasses;
 using ScheduleOne.PlayerScripts;
 using ScheduleOne.Product;
 using ScheduleOne.Quests;
+using ScheduleOne.UI.Shop;
+using ScheduleOne.UI.Phone;
+using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.UI.Phone.Delivery;
 #endif
 
 namespace UnicornsCustomSeeds.Managers
 {
     public static class CustomPseudoManager
     {
+        
+        // 
         public const string PSEUDO_BASE_ID     = "pseudo";
+        public const string PSEUDO_HI_ID     = "highqualitypseudo";
+        public const string PSEUDO_LO_ID     = "lowqualitypseudo";
         public const string BASE_LIQUIDMETH_ID = "liquidmeth";
-
-        // ── Test mix IDs — replace placeholders with real IDs as discovered ──
-        // OnPseudoSynthesisRequested iterates this array and synthesizes the
-        // first mix not yet represented in the Registry.
-        public static readonly string[] TEST_METH_MIX_IDS = new string[]
-        {
-            "laghost",          // confirmed
-            "aspenmonkey",      // confirmed
-            "kryptonitesucks",  // confirmed
-            "nightmaregrool",   // confirmed
-            "meth_mix_05",      // placeholder
-            "meth_mix_06",      // placeholder
-        };
 
         public static PseudoFactory factory;
         public static Dictionary<string, UnicornSeedData> DiscoveredPseudoSeeds
             = new Dictionary<string, UnicornSeedData>();
 
+        public static ShopInterface ShirleyShop = null;
         public static Shirley shirley = null;
 
         // ─────────────────────────────────────────────────────────────────────
@@ -75,7 +75,22 @@ namespace UnicornsCustomSeeds.Managers
                 if (shirley.MSGConversation != null)
                     ConversationManager.RegisterConversation("Shirley", shirley.MSGConversation);
 
-                SetupShirleyConversation();
+                ShirleyShop = shirley.Shop;
+                if (ShirleyShop == null)
+                    Utility.Error("CustomPseudoManager: Shirley's shop is null!");
+
+                PseudoQuestManager.Init();
+                ShirleyStashManager.GetShirleysStash();
+
+                foreach (var kvp in DiscoveredPseudoSeeds)
+                {
+                    foreach (var variant in kvp.Value.variants)
+                    {
+                        var existingPseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
+                        if (existingPseudo != null)
+                            CreateShopListing(existingPseudo, variant.price);
+                    }
+                }
             }
             else
             {
@@ -83,58 +98,7 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-        private static void SetupShirleyConversation()
-        {
-            MSGConversation convo = ConversationManager.GetConversation("Shirley");
-            if (convo != null)
-            {
-                SendableMessage sendable = convo.CreateSendableMessage("Synthesize Pseudo");
-                sendable.onSent += (Action)OnPseudoSynthesisRequested;
-                Utility.Log("CustomPseudoManager: 'Synthesize Pseudo' message registered on Shirley.");
-            }
-            else
-            {
-                Utility.Error("CustomPseudoManager: Could not get Shirley conversation from ConversationManager.");
-            }
-        }
-
-        public static void OnPseudoSynthesisRequested()
-        {
-            MethDefinition target = null;
-            foreach (string mixId in TEST_METH_MIX_IDS)
-            {
-                if (DiscoveredPseudoSeeds.ContainsKey(mixId))
-                    continue; // already synthesized this session
-
-                if (Registry.ItemExists(mixId + "_custompseudo"))
-                    continue; // already in Registry from a previous session
-
-#if IL2CPP
-                MethDefinition methDef = Registry.GetItem<ProductDefinition>(mixId)?.TryCast<MethDefinition>();
-#elif MONO
-                MethDefinition methDef = Registry.GetItem<MethDefinition>(mixId);
-#endif
-                if (methDef == null)
-                {
-                    Utility.Log($"CustomPseudoManager: Mix '{mixId}' not found in Registry as MethDefinition — skipping.");
-                    continue;
-                }
-
-                target = methDef;
-                break;
-            }
-
-            if (target == null)
-            {
-                Utility.Log("CustomPseudoManager: All test mixes already synthesized or not found in Registry.");
-                ConversationManager.SendMessage("Shirley", "All available pseudo chains have already been synthesized.");
-                return;
-            }
-
-            MelonCoroutines.Start(CreatePseudoChain(target));
-        }
-
-        public static IEnumerator CreatePseudoChain(MethDefinition methDef)
+        public static IEnumerator CreatePseudoChain(MethDefinition methDef, EQuality quality)
         {
             yield return new WaitForSeconds(5f);
 
@@ -150,39 +114,57 @@ namespace UnicornsCustomSeeds.Managers
                 yield break;
             }
 
-            QualityItemDefinition customPseudo = factory.CreatePseudoChain(methDef);
-            if (customPseudo == null)
-            {
-                Utility.Error("CustomPseudoManager: CreatePseudoChain returned null.");
-                yield break;
-            }
-
-            PseudoFactory.AddPseudoToChemistryStations(customPseudo);
-
             UnicornSeedData newData = new UnicornSeedData
             {
-                seedId   = customPseudo.ID,
-                mixId    = methDef.ID,
+                mixId = methDef.ID,
                 drugType = EDrugType.Methamphetamine,
-                price    = 100f,
             };
+
+            foreach (string pseudoBaseId in GetSupportedPseudoBaseIds())
+            {
+                QualityItemDefinition customPseudo = factory.CreatePseudoChain(methDef, pseudoBaseId);
+                if (customPseudo == null)
+                {
+                    Utility.Error($"CustomPseudoManager: CreatePseudoChain returned null for base '{pseudoBaseId}'.");
+                    yield break;
+                }
+
+                PseudoFactory.AddPseudoToChemistryStations(customPseudo);
+                float price = CalculatePseudoPrice(methDef, pseudoBaseId);
+
+                VariantSeedData variant = new VariantSeedData
+                {
+                    baseItemId = pseudoBaseId,
+                    seedId = customPseudo.ID,
+                    price = price,
+                };
+                newData.variants.Add(variant);
+                customPseudo.BasePurchasePrice = price;
+                CreateShopListing(customPseudo, variant.price);
+            }
+
+            factory.InjectRecipeForMix(newData, methDef.ID);
             DiscoveredPseudoSeeds.Add(newData.mixId, newData);
 
+            string deadDropPseudoBaseId = ResolvePseudoBaseIdForQuality(quality);
+            VariantSeedData deadDropVariant = newData.GetVariant(deadDropPseudoBaseId) ?? newData.variants[0];
+            QualityItemDefinition deadDropPseudo = Registry.GetItem<QualityItemDefinition>(deadDropVariant.seedId);
+
             DeadDrop randomDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
-            if (randomDrop != null && InstanceFinder.IsServer)
+            if (randomDrop != null && InstanceFinder.IsServer && deadDropPseudo != null)
             {
-                ItemInstance defaultInstance = customPseudo.GetDefaultInstance();
+                ItemInstance defaultInstance = deadDropPseudo.GetDefaultInstance();
                 defaultInstance.SetQuantity(5);
                 randomDrop.Storage.InsertItem(defaultInstance, true);
 
                 string guidString = GUIDManager.GenerateUniqueGUID().ToString();
                 NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null, randomDrop.GUID.ToString(), guidString);
                 ConversationManager.SendMessage("Shirley", $"{methDef.name} pseudo synthesized and placed in a dead drop.");
-                Utility.Log($"CustomPseudoManager: Placed 5x '{customPseudo.ID}' in dead drop '{randomDrop.GUID}'.");
+                Utility.Log($"CustomPseudoManager: Placed 5x '{deadDropPseudo.ID}' in dead drop '{randomDrop.GUID}'.");
             }
             else
             {
-                Utility.Error("CustomPseudoManager: No available dead drop for pseudo placement, or not server.");
+                Utility.Error("CustomPseudoManager: No available dead drop for pseudo placement, not server, or dead drop pseudo could not be resolved.");
             }
         }
 
@@ -210,57 +192,180 @@ namespace UnicornsCustomSeeds.Managers
 
             foreach (var kvp in DiscoveredPseudoSeeds)
             {
-                string mixId    = kvp.Key;
-                string pseudoId = $"{mixId}_custompseudo";
-
-                if (!Registry.ItemExists(pseudoId))
-                {
+                string mixId = kvp.Key;
 #if IL2CPP
-                    MethDefinition methDef = Registry.GetItem<ProductDefinition>(mixId)?.TryCast<MethDefinition>();
+                MethDefinition methDef = Registry.GetItem<ProductDefinition>(mixId)?.TryCast<MethDefinition>();
 #elif MONO
-                    MethDefinition methDef = Registry.GetItem<MethDefinition>(mixId);
+                MethDefinition methDef = Registry.GetItem<MethDefinition>(mixId);
 #endif
-                    if (methDef == null)
-                    {
-                        Utility.Error($"CustomPseudoManager.RestorePseudoFilters: MethDefinition '{mixId}' not in Registry — skipping.");
-                        continue;
-                    }
+                if (methDef == null)
+                {
+                    Utility.Error($"CustomPseudoManager.RestorePseudoFilters: MethDefinition '{mixId}' not in Registry — skipping.");
+                    continue;
+                }
 
-                    QualityItemDefinition rebuilt = factory.CreatePseudoChain(methDef);
+                NormalizeVariants(kvp.Value, methDef);
+
+                foreach (var variant in kvp.Value.variants)
+                {
+                    if (Registry.ItemExists(variant.seedId))
+                        continue;
+
+                    QualityItemDefinition rebuilt = factory.CreatePseudoChain(methDef, variant.baseItemId);
                     if (rebuilt == null)
                     {
-                        Utility.Error($"CustomPseudoManager.RestorePseudoFilters: CreatePseudoChain returned null for '{mixId}'.");
+                        Utility.Error($"CustomPseudoManager.RestorePseudoFilters: CreatePseudoChain returned null for '{mixId}' / '{variant.baseItemId}'.");
                         continue;
                     }
+                    Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Rebuilt chain for '{mixId}' / '{variant.baseItemId}'.");
+                }
 
-                    Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Rebuilt chain for '{mixId}'.");
-                }
-                else
-                {
-                    // Assets already in Registry — re-inject the recipe into the canvas
-                    // (canvas.Recipes resets each scene, so this must run every load).
-                    factory.InjectRecipeForMix(mixId);
-                }
+                factory.InjectRecipeForMix(kvp.Value, mixId);
 
                 // Always re-add to station filters — runtime objects reset each load
-                var pseudo = Registry.GetItem<QualityItemDefinition>(pseudoId);
-                if (pseudo != null)
+                foreach (var variant in kvp.Value.variants)
                 {
-                    PseudoFactory.AddPseudoToChemistryStations(pseudo);
-                    Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Restored filters for '{pseudoId}'.");
-                }
-                else
-                {
-                    Utility.Error($"CustomPseudoManager.RestorePseudoFilters: Could not resolve '{pseudoId}' from Registry after rebuild.");
+                    var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
+                    if (pseudo != null)
+                    {
+                        PseudoFactory.AddPseudoToChemistryStations(pseudo);
+                        Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Restored filters for '{variant.seedId}'.");
+                    }
+                    else
+                    {
+                        Utility.Error($"CustomPseudoManager.RestorePseudoFilters: Could not resolve '{variant.seedId}' from Registry after rebuild.");
+                    }
                 }
             }
+        }
+
+        public static void CreateShopListing(QualityItemDefinition newPseudo, float price = 10f)
+        {
+            if (ShirleyShop == null) return;
+
+            ShopListing newListing = new ShopListing();
+            newListing.name = $"{newPseudo.ID} (${price}) (Pseudo, )";
+            newListing.Item = newPseudo;
+            newListing.IconTint = new Color(0.2f, 0.8f, 0.2f, 1f);
+            newListing.MinimumGameCreationVersion = 27;
+            newListing.DefaultStock = 1000;
+            newListing.CurrentStock = 100000;
+            newListing.CanBeDelivered = true;
+            ShirleyShop.Listings.Add(newListing);
+            ShirleyShop.CreateListingUI(newListing);
+            CreatePhoneShopListing(newPseudo);
+            CreateDeliveryListing(newListing);
+            ShirleyShop.RefreshShownItems();
+        }
+
+        public static void CreatePhoneShopListing(QualityItemDefinition newPseudo)
+        {
+            if (shirley == null) return;
+            PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newPseudo);
+            var updated = HarmonyLib.CollectionExtensions.AddItem(shirley.OnlineShopItems, newEntry);
+            shirley.OnlineShopItems = updated.ToArray();
+        }
+
+        public static void CreateDeliveryListing(ShopListing newListing)
+        {
+            if (ShirleyShop == null) return;
+            var deliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop(ShirleyShop.ShopName);
+            if (deliveryShop == null) return;
+            ListingEntry entry = UnityEngine.Object.Instantiate<ListingEntry>(deliveryShop.ListingEntryPrefab, deliveryShop.ListingContainer);
+            entry.Initialize(newListing);
+            entry.onQuantityChanged.AddListener((UnityEngine.Events.UnityAction)deliveryShop.RefreshCart);
+            deliveryShop.listingEntries.Add(entry);
+            deliveryShop.ListingContainer.sizeDelta = new Vector2(deliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(deliveryShop.listingEntries.Count / 2.0) * 60f);
         }
 
         public static void ClearAll()
         {
             DiscoveredPseudoSeeds.Clear();
+            ShirleyShop = null;
             shirley = null;
             if (factory != null) factory.DeleteChildren();
+        }
+
+        public static string ResolvePseudoBaseIdForQuality(EQuality quality)
+        {
+            switch (quality)
+            {
+                case EQuality.Trash:
+                case EQuality.Poor:
+                    return PSEUDO_LO_ID;
+
+                case EQuality.Premium:
+                case EQuality.Heavenly:
+                    // Heavenly gets its own dedicated pseudo base in a future spec.
+                    // Until then it uses the highest currently-supported pseudo tier.
+                    return PSEUDO_HI_ID;
+
+                case EQuality.Standard:
+                default:
+                    return PSEUDO_BASE_ID;
+            }
+        }
+
+        public static string InferPseudoBaseIdFromSeedId(string seedId)
+        {
+            if (string.IsNullOrEmpty(seedId))
+                return PSEUDO_BASE_ID;
+
+            if (seedId.Contains($"_{PSEUDO_LO_ID}_"))
+                return PSEUDO_LO_ID;
+
+            if (seedId.Contains($"_{PSEUDO_HI_ID}_"))
+                return PSEUDO_HI_ID;
+
+            if (seedId.Contains($"_{PSEUDO_BASE_ID}_"))
+                return PSEUDO_BASE_ID;
+
+            Utility.Error($"CustomPseudoManager: Could not infer pseudo base from seedId '{seedId}', defaulting to '{PSEUDO_BASE_ID}'.");
+            return PSEUDO_BASE_ID;
+        }
+
+        public static string[] GetSupportedPseudoBaseIds()
+        {
+            return new[] { PSEUDO_LO_ID, PSEUDO_BASE_ID, PSEUDO_HI_ID };
+        }
+
+        private static void NormalizeVariants(UnicornSeedData data, MethDefinition methDef)
+        {
+            if (data.variants == null)
+                data.variants = new List<VariantSeedData>();
+
+            foreach (string pseudoBaseId in GetSupportedPseudoBaseIds())
+            {
+                if (data.GetVariant(pseudoBaseId) != null)
+                    continue;
+
+                data.variants.Add(new VariantSeedData
+                {
+                    baseItemId = pseudoBaseId,
+                    seedId = BuildPseudoSeedId(data.mixId, pseudoBaseId),
+                    price = CalculatePseudoPrice(methDef, pseudoBaseId),
+                });
+            }
+        }
+
+        public static string BuildPseudoSeedId(string mixId, string pseudoBaseId)
+        {
+            return $"{mixId}_{pseudoBaseId}_custompseudo";
+        }
+
+        private static float CalculatePseudoPrice(MethDefinition methDef, string pseudoBaseId)
+        {
+            float ingredientCost = StashManager.GetIngredientCost(methDef);
+            
+            float pseudoBaseCost = 0f;
+
+            var pseudoBase = Registry.GetItem<QualityItemDefinition>(pseudoBaseId);
+            if (pseudoBase != null)
+                pseudoBaseCost = pseudoBase.BasePurchasePrice;
+            else
+                Utility.Error($"CustomPseudoManager: Could not resolve pseudo base '{pseudoBaseId}' for price calculation.");
+
+            return ingredientCost + pseudoBaseCost;
         }
     }
 }

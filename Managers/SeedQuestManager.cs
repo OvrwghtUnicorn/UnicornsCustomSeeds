@@ -24,9 +24,9 @@ namespace UnicornsCustomSeeds.Managers
 {
     public static class SeedQuestManager
     {
-        public static CustomSeedQuest seedDropoff;
+        public static CustomSynthesisQuest seedDropoff;
 
-        public static string messageId = "Synthesize Seeds";
+        public static string sendableMessageId = "Synthesize Seeds";
         public static bool IsWaitingForDropoff = false;
         public static bool HasActiveQuest => IsWaitingForDropoff;
 
@@ -34,7 +34,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void Init()
         {
-            var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+            var quest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSynthesisQuest;
             if (quest != null)
             {
                 seedDropoff = quest;
@@ -49,7 +49,7 @@ namespace UnicornsCustomSeeds.Managers
             if (convo != null)
             {
                 MessageSenderInterface senderInterface = convo.senderInterface;
-                SendableMessage sendable = convo.CreateSendableMessage(messageId);
+                SendableMessage sendable = convo.CreateSendableMessage(sendableMessageId);
                 sendable.onSent += (Action)OnSent;
             }
         }
@@ -71,7 +71,8 @@ namespace UnicornsCustomSeeds.Managers
                 if (seedDropoff == null)
                 {
                     if (InstanceFinder.IsServer) BroadcastCustomQuest();
-                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    seedDropoff?.SetDrugType(EDrugType.Marijuana);
                 }
             }
         }
@@ -114,7 +115,7 @@ namespace UnicornsCustomSeeds.Managers
                 try
                 {
                     // Check if quest already exists
-                    var existingQuest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSeedQuest;
+                    var existingQuest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Mix") as CustomSynthesisQuest;
                     if (existingQuest != null)
                     {
                         seedDropoff = existingQuest;
@@ -123,7 +124,8 @@ namespace UnicornsCustomSeeds.Managers
                     }
 
                     // Try to create the quest
-                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSeedQuest>() as CustomSeedQuest;
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    seedDropoff?.SetDrugType(EDrugType.Marijuana);
 
                     if (seedDropoff != null)
                     {

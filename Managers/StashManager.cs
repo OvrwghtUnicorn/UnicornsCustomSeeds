@@ -210,10 +210,10 @@ namespace UnicornsCustomSeeds.Managers
                     totalCost += ingredient.BasePurchasePrice;
                     continue;
                 }
-
+								
                 SeedDefinition seed = ResolveSeedForProduct(product);
                 if (seed != null)
-                {
+								{
                     totalCost += seed.BasePurchasePrice;
                 }
                 else
