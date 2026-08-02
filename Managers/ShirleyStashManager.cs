@@ -20,8 +20,19 @@ namespace UnicornsCustomSeeds.Managers
         public static SupplierStash shirleysStash;
         private static float lastClosedTime = 0f;
 
+        public static SupplierStash GetSupplierStash()
+        {
+            if (shirleysStash != null)
+            {
+                return shirleysStash;
+            }
+            GetShirleysStash();
+            return shirleysStash;
+        }
         public static void GetShirleysStash()
         {
+            if (shirleysStash != null) return;
+
             var stashes = UnityEngine.Object.FindObjectsOfType<SupplierStash>();
             foreach (SupplierStash stash in stashes)
             {
@@ -33,9 +44,6 @@ namespace UnicornsCustomSeeds.Managers
                     break;
                 }
             }
-
-            if (shirleysStash == null)
-                Utility.Error("ShirleyStashManager: Could not find Shirley's stash in scene.");
         }
 
         public static void ShirleysStashClosed()

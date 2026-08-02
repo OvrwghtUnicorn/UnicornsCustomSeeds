@@ -20,8 +20,19 @@ namespace UnicornsCustomSeeds.Managers
         public static SupplierStash salvadorsStash;
         private static float lastClosedTime = 0f;
 
+        public static SupplierStash GetSupplierStash()
+        {
+            if (salvadorsStash != null)
+            {
+                return salvadorsStash;
+            }
+            GetSalvadorsStash();
+            return salvadorsStash;
+        }
         public static void GetSalvadorsStash()
         {
+            if (salvadorsStash != null) return;
+
             var stashes = UnityEngine.Object.FindObjectsOfType<SupplierStash>();
             foreach (SupplierStash stash in stashes)
             {
@@ -33,9 +44,6 @@ namespace UnicornsCustomSeeds.Managers
                     break;
                 }
             }
-
-            if (salvadorsStash == null)
-                Utility.Error("SalvadorStashManager: Could not find Salvador's stash in scene.");
         }
 
         public static void SalvadorsStashClosed()

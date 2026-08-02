@@ -279,7 +279,7 @@ namespace UnicornsCustomSeeds.Seeds
             LiquidMethDefinition customLiquidMeth,
             string methId)
         {
-            var canvas = Singleton<ChemistryStationCanvas>.Instance;
+            var canvas = Singleton<ChemistryStationInterface>.Instance;
             string recipeName = $"{methId}_customrecipe";
 
             // Idempotent — skip if already present
@@ -350,7 +350,7 @@ namespace UnicornsCustomSeeds.Seeds
             canvas.Recipes.Add(customRecipe);
             canvas.recipeEntries.Add(component);
 
-            Utility.Log($"PseudoFactory: Injected recipe '{recipeName}' (Unlocked={customRecipe.Unlocked}, IsDiscovered={customRecipe.IsDiscovered}) into ChemistryStationCanvas.");
+            Utility.Log($"PseudoFactory: Injected recipe '{recipeName}' (Unlocked={customRecipe.Unlocked}, IsDiscovered={customRecipe.IsDiscovered}) into ChemistryStationInterface.");
         }
 
         private QualityItemDefinition ResolvePseudoBaseDefinition(string pseudoBaseId)

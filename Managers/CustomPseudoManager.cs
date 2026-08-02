@@ -5,7 +5,6 @@ using MelonLoader;
 using UnityEngine;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
-using Il2CppScheduleOne.Economy;
 
 
 #if IL2CPP
@@ -13,6 +12,7 @@ using Il2Cpp;
 using Il2CppFishNet;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.Misc;
@@ -80,7 +80,6 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Error("CustomPseudoManager: Shirley's shop is null!");
 
                 PseudoQuestManager.Init();
-                ShirleyStashManager.GetShirleysStash();
 
                 foreach (var kvp in DiscoveredPseudoSeeds)
                 {
@@ -262,8 +261,8 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (shirley == null) return;
             PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newPseudo);
-            var updated = HarmonyLib.CollectionExtensions.AddItem(shirley.OnlineShopItems, newEntry);
-            shirley.OnlineShopItems = updated.ToArray();
+            var updated = HarmonyLib.CollectionExtensions.AddItem(shirley.SupplierData.DeliveryShopListings, newEntry);
+            shirley.SupplierData.DeliveryShopListings = updated.ToArray();
         }
 
         public static void CreateDeliveryListing(ShopListing newListing)

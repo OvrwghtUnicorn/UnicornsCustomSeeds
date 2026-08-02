@@ -8,14 +8,13 @@ using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.TemplateUtils;
 
 
-
 #if IL2CPP
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
-using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.StationFramework;
 using Il2CppScheduleOne.UI.Stations;
@@ -24,6 +23,7 @@ using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
+using ScheduleOne.ObjectScripts;
 using ScheduleOne.Persistence;
 using ScheduleOne.ObjectScripts;
 using ScheduleOne.Product;
@@ -49,6 +49,13 @@ namespace UnicornsCustomSeeds
 
     public class Core : MelonMod
     {
+        /// <summary>
+        /// True once StashManager.WaitForAllStashesAndSubscribe() has finished
+        /// (either all four supplier stashes were found and subscribed, or it
+        /// timed out waiting). Set from StashManager, not Core, since the
+        /// coroutine is what actually knows when stash lookups are done.
+        /// </summary>
+        public static bool ModInitialized = false;
 
         public override void OnInitializeMelon()
         {
@@ -102,6 +109,7 @@ namespace UnicornsCustomSeeds
             CustomShroomsManager.Initialize();
             CustomCocaSeedsManager.Initialize();
             CustomPseudoManager.Initialize();
+
             StashManager.GetAlbertsStash();
 
             if (CustomSeedsManager.letsMigrate)
@@ -117,6 +125,8 @@ namespace UnicornsCustomSeeds
                 Utility.Success($"Successfully migrated {CustomSeedsManager.DiscoveredSeeds.Count} seed(s)");
                 CustomSeedsManager.letsMigrate = false;
             }
+
+            MelonCoroutines.Start(StashManager.WaitForAllStashesAndSubscribe());
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
@@ -148,8 +158,6 @@ namespace UnicornsCustomSeeds
                 Utility.Error($"Core: CocaFactory init failed — cocaseed={baseCocaSeed != null}, cocaleaf={baseCocaLeaf != null}, cocainebase={baseCocaBase != null}");
             }
 
-            StashManager.GetAlbertsStash();
-
             // When returning to the main scene clear all data structures to prevent overlap with other saves
             if (sceneName.ToLower() != "main")
             {
@@ -160,6 +168,7 @@ namespace UnicornsCustomSeeds
                 UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
                 StashManager.ClearCaches();
+                ModInitialized = false;
             }
             else
             {
@@ -185,7 +194,7 @@ namespace UnicornsCustomSeeds
                 bool ready = false;
                 try
                 {
-                    ready = Singleton<ChemistryStationCanvas>.Instance?.Recipes?.Count > 0;
+                    ready = Singleton<ChemistryStationInterface>.Instance?.Recipes?.Count > 0;
                 }
                 catch { /* singleton not initialised yet */ }
 
@@ -195,7 +204,7 @@ namespace UnicornsCustomSeeds
 
             if (timeoutFrames <= 0)
             {
-                Utility.Error("Core: Timed out waiting for ChemistryStationCanvas.Recipes — PseudoFactory not initialized.");
+                Utility.Error("Core: Timed out waiting for ChemistryStationInterface.Recipes — PseudoFactory not initialized.");
                 yield break;
             }
 
@@ -211,7 +220,7 @@ namespace UnicornsCustomSeeds
                 LiquidMethDefinition baseLiquidMeth = rawLiquidMeth as LiquidMethDefinition;
 #endif
                 StationRecipe baseRecipe = null;
-                foreach (StationRecipe r in Singleton<ChemistryStationCanvas>.Instance.Recipes)
+                foreach (StationRecipe r in Singleton<ChemistryStationInterface>.Instance.Recipes)
                 {
                     if (r.Product?.Item?.ID == CustomPseudoManager.BASE_LIQUIDMETH_ID)
                     {

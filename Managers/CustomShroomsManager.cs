@@ -75,7 +75,6 @@ namespace UnicornsCustomSeeds.Managers
                     ConversationManager.RegisterConversation("Phil", phil.MSGConversation);
 
                 ShroomQuestManager.Init();
-                PhilStashManager.GetPhilsStash();
 
                 // Reload any syringes that were discovered in a previous session
                 foreach (var kvp in DiscoveredShrooms)

@@ -89,7 +89,6 @@ namespace UnicornsCustomSeeds.Managers
                     ConversationManager.RegisterConversation("Salvador", salvador.MSGConversation);
 
                 CocaQuestManager.Init();
-                SalvadorStashManager.GetSalvadorsStash();
 
                 foreach (var kvp in DiscoveredCocaSeeds)
                 {
@@ -253,8 +252,8 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (salvador == null) return;
             PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newSeed);
-            var updated = HarmonyLib.CollectionExtensions.AddItem(salvador.OnlineShopItems, newEntry);
-            salvador.OnlineShopItems = updated.ToArray();
+            var updated = HarmonyLib.CollectionExtensions.AddItem(salvador.SupplierData.DeliveryShopListings, newEntry);
+            salvador.SupplierData.DeliveryShopListings = updated.ToArray();
         }
 
         public static void CreateDeliveryListing(ShopListing newListing)

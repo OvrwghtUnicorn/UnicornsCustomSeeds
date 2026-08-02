@@ -1,6 +1,8 @@
 using S1API.Quests;
 using S1API.Saveables;
 using UnicornsCustomSeeds.Managers;
+using UnicornsCustomSeeds.TemplateUtils;
+
 
 #if IL2CPP
 using Il2CppScheduleOne.Economy;
@@ -83,19 +85,27 @@ namespace UnicornsCustomSeeds.SeedQuests
 
         protected override void OnCreated()
         {
-            AddDropoffEntry();
+            if (QuestEntries.Count == 0)
+            {
+                Utility.Log("[OnCreated]");
+                AddDropoffEntry();
+            }
         }
 
         protected override void OnLoaded()
         {
             if (QuestEntries.Count == 0)
+            {
+                Utility.Log("[OnLoaded]");
                 AddDropoffEntry();
+            }
         }
 
         private void AddDropoffEntry()
         {
             string npc  = GetNPCName();
             string item = GetItemName();
+            Utility.Log($"Attempting to get the stash for drug {_data.drugType}");
             var stash = GetStash();
             UnityEngine.Vector3 poi = stash != null ? stash.transform.position : UnityEngine.Vector3.zero;
             dropoffEntry = AddEntry(
@@ -105,10 +115,10 @@ namespace UnicornsCustomSeeds.SeedQuests
 
         private SupplierStash GetStash() => _data.drugType switch
         {
-            EDrugType.Marijuana       => StashManager.albertsStash,
-            EDrugType.Shrooms         => PhilStashManager.philsStash,
-            EDrugType.Cocaine         => SalvadorStashManager.salvadorsStash,
-            EDrugType.Methamphetamine => ShirleyStashManager.shirleysStash,
+            EDrugType.Marijuana       => StashManager.GetSupplierStash(),
+            EDrugType.Shrooms         => PhilStashManager.GetSupplierStash(),
+            EDrugType.Cocaine         => SalvadorStashManager.GetSupplierStash(),
+            EDrugType.Methamphetamine => ShirleyStashManager.GetSupplierStash(),
             _                         => null,
         };
     }
