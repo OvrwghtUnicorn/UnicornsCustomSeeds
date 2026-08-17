@@ -34,6 +34,11 @@ namespace UnicornsCustomSeeds.Seeds
         public static readonly Dictionary<string, string> CustomPseudoIdToLiquidMethId
             = new Dictionary<string, string>();
 
+        // Key: MethDefinition.ID → generated pseudo icon. All 3 quality tiers for a mix share
+        // identical appearance colors and base art, so the fill only needs to run once per mix;
+        // every tier's clone.Icon then points at the same Sprite instance.
+        private readonly Dictionary<string, Sprite> pseudoIconCache = new Dictionary<string, Sprite>();
+
         private readonly Dictionary<string, QualityItemDefinition> basePseudoDefinitions;
         private readonly LiquidMethDefinition baseLiquidMethDefinition;
         private readonly StationRecipe baseStationRecipe;
@@ -65,6 +70,7 @@ namespace UnicornsCustomSeeds.Seeds
         {
             rootGameObject.DeleteChildren(true, false);
             CustomPseudoIdToLiquidMethId.Clear();
+            pseudoIconCache.Clear();
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -209,7 +215,48 @@ namespace UnicornsCustomSeeds.Seeds
                 Utility.Error("PseudoFactory: baseLiquidMethDefinition.StationItem is null.");
             }
 
+            AssignLiquidMethIcon(clone, methDef);
+
             return clone;
+        }
+
+        /// <summary>
+        /// Generates a per-mix coloured icon for the liquid meth item from the meth mix's
+        /// appearance settings. LiquidMethDefinition has no appearance mechanism of its own
+        /// (confirmed — only per-instance visual-effect color fields, not a per-mix descriptor),
+        /// so this sources colors from the same MethDefinition.AppearanceSettings the pseudo
+        /// tiers use.
+        /// </summary>
+        private void AssignLiquidMethIcon(LiquidMethDefinition clone, MethDefinition methDef)
+        {
+            if (SeedVisualsManager.baseLiquidMethSprite == null) return;
+
+            MethAppearanceSettings appearance = methDef.AppearanceSettings;
+            if (appearance == null || appearance.IsUnintialized())
+                appearance = MethDefinition.GetAppearanceSettings(methDef.Properties);
+
+            if (appearance == null)
+            {
+                Utility.Error($"PseudoFactory: No appearance settings for '{methDef.ID}' — keeping base liquid meth icon.");
+                return;
+            }
+
+            try
+            {
+                (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
+                Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
+                    SeedVisualsManager.baseLiquidMethSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                if (newIcon == null) return;
+
+                newIcon.name = clone.name + "_icon";
+                SeedVisualsManager.seedIcons[clone.ID] = newIcon;
+                clone.Icon = newIcon;
+            }
+            catch (Exception e)
+            {
+                clone.Icon = SeedVisualsManager.baseLiquidMethSprite;
+                Utility.PrintException(e);
+            }
         }
 
         private LiquidMethDefinition ResolveOrCreateCustomLiquidMeth(MethDefinition methDef)
@@ -254,8 +301,61 @@ namespace UnicornsCustomSeeds.Seeds
             clone.Description = basePseudoDefinition.Description;
             clone.StationItem = basePseudoDefinition.StationItem;
 
+            AssignPseudoIcon(clone, methDef);
+
             CustomPseudoIdToLiquidMethId[clone.ID] = customLiquidMeth.ID;
             return clone;
+        }
+
+        /// <summary>
+        /// Assigns a per-mix coloured icon to a pseudo quality tier. All 3 tiers for the same
+        /// mix are visually identical (same base art, same appearance colors), so the fill is
+        /// only generated once per methDef.ID and cached in pseudoIconCache — every tier after
+        /// the first just reuses that same Sprite instance instead of re-running the fill.
+        /// </summary>
+        private void AssignPseudoIcon(QualityItemDefinition clone, MethDefinition methDef)
+        {
+            if (SeedVisualsManager.basePseudoSprite == null) return;
+
+            if (!pseudoIconCache.TryGetValue(methDef.ID, out Sprite sharedIcon))
+            {
+                sharedIcon = GeneratePseudoIcon(methDef);
+                if (sharedIcon == null) return;
+
+                pseudoIconCache[methDef.ID] = sharedIcon;
+            }
+
+            SeedVisualsManager.seedIcons[clone.ID] = sharedIcon;
+            clone.Icon = sharedIcon;
+        }
+
+        private Sprite GeneratePseudoIcon(MethDefinition methDef)
+        {
+            MethAppearanceSettings appearance = methDef.AppearanceSettings;
+            if (appearance == null || appearance.IsUnintialized())
+                appearance = MethDefinition.GetAppearanceSettings(methDef.Properties);
+
+            if (appearance == null)
+            {
+                Utility.Error($"PseudoFactory: No appearance settings for '{methDef.ID}' — keeping base icon.");
+                return null;
+            }
+
+            try
+            {
+                Utility.Log($"[PSEUDO] Main Color: {appearance.MainColor}, Secondary Color: {appearance.SecondaryColor}");
+                (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
+                Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
+                    SeedVisualsManager.basePseudoSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                if (newIcon != null)
+                    newIcon.name = $"{methDef.ID}_pseudo_icon";
+                return newIcon;
+            }
+            catch (Exception e)
+            {
+                Utility.PrintException(e);
+                return SeedVisualsManager.basePseudoSprite;
+            }
         }
 
         private QualityItemDefinition ResolveOrCreateCustomPseudo(QualityItemDefinition basePseudoDefinition, LiquidMethDefinition customLiquidMeth, MethDefinition methDef)

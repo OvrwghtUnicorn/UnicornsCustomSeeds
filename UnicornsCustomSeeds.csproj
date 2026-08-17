@@ -40,10 +40,19 @@
 	<ItemGroup>
 		<Compile Include="Core.cs" />
 		<Compile Include="Managers\ActiveCookingRegistry.cs" />
+		<Compile Include="Managers\CocaQuestManager.cs" />
 		<Compile Include="Managers\ConversationManager.cs" />
 		<Compile Include="Managers\CustomCocaSeedsManager.cs" />
+		<Compile Include="Managers\CustomPseudoManager.cs" />
 		<Compile Include="Managers\CustomShroomsManager.cs" />
 		<Compile Include="Managers\DeferredPlantsManager.cs" />
+		<Compile Include="Managers\PhilStashManager.cs" />
+		<Compile Include="Managers\PseudoQuestManager.cs" />
+		<Compile Include="Managers\SalvadorStashManager.cs" />
+		<Compile Include="Managers\ShirleyStashManager.cs" />
+		<Compile Include="Managers\ShroomQuestManager.cs" />
+		<Compile Include="Patches\CauldronPatches.cs" />
+		<Compile Include="Patches\FinishCookingCommand.cs" />
 		<Compile Include="Patches\NetworkingPatches.cs" />
 		<Compile Include="Patches\ProductManagerAppPatches.cs" />
 		<Compile Include="SeedQuests\CustomSeedQuest.cs" />
@@ -52,7 +61,10 @@
 		<Compile Include="Managers\SeedVisualsManager.cs" />
 		<Compile Include="Patches\AddRecipePatch.cs" />
 		<Compile Include="Patches\SendableMessagePatch.cs" />
+		<Compile Include="SeedQuests\CustomSynthesisQuest.cs" />
+		<Compile Include="SeedQuests\CustomSynthesisQuestData.cs" />
 		<Compile Include="Seeds\CocaFactory.cs" />
+		<Compile Include="Seeds\PseudoFactory.cs" />
 		<Compile Include="Seeds\SyringeFactory.cs" />
 		<Compile Include="Seeds\UnicornSeedData.cs" />
 		<Compile Include="Managers\CustomSeedsManager.cs" />

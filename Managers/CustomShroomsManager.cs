@@ -118,6 +118,10 @@ namespace UnicornsCustomSeeds.Managers
             if (newSyringe == null) return null;
 
             Singleton<Registry>.Instance.AddToRegistry(newSyringe);
+
+            try { Singleton<ManagementUtilities>.Instance.MushroomSpawns.Add(newSyringe.SpawnDefinition); }
+            catch (Exception ex) { Utility.PrintException(ex); }
+
             AddSyringeToSpawnStations(newSyringe);
             CreateShopListing(newSyringe, data.price);
             Utility.Log($"SyringeDefinitionLoader: Reloaded syringe '{newSyringe.ID}'.");
@@ -179,6 +183,28 @@ namespace UnicornsCustomSeeds.Managers
             }
 
             //NetworkSyncManager.Broadcast(newData);
+        }
+
+        /// <summary>
+        /// Pushes a new ShroomSpawnDefinition into every MushroomBed already present in the
+        /// scene, mirroring CustomSeedsManager.AddSeedToPots. MushroomBedConfiguration.Spawn.Options
+        /// is only populated from ManagementUtilities.MushroomSpawns when a bed's config first
+        /// initializes, so beds already spawned need the new spawn definition pushed directly.
+        /// </summary>
+        public static void AddSpawnToMushroomBeds(ShroomSpawnDefinition newSpawn)
+        {
+            var beds = GameObject.FindObjectsOfType<MushroomBed>();
+            foreach (MushroomBed bed in beds)
+            {
+#if IL2CPP
+                if (bed.Configuration.TryCast<MushroomBedConfiguration>() is MushroomBedConfiguration config)
+                {
+#elif MONO
+                if (bed.Configuration is MushroomBedConfiguration config) {
+#endif
+                    config.Spawn.Options.Add(newSpawn);
+                }
+            }
         }
 
         /// <summary>
