@@ -165,6 +165,8 @@ namespace UnicornsCustomSeeds.Managers
             {
                 Utility.Error("CustomPseudoManager: No available dead drop for pseudo placement, not server, or dead drop pseudo could not be resolved.");
             }
+
+            NetworkSyncManager.Broadcast(newData);
         }
 
         // ─────────────────────────────────────────────────────────────────────

@@ -105,12 +105,31 @@ namespace UnicornsCustomSeeds.SeedQuests
         {
             string npc  = GetNPCName();
             string item = GetItemName();
-            Utility.Log($"Attempting to get the stash for drug {_data.drugType}");
+
+            // Temporary diagnostic bracketing — a client-side crash was landing
+            // somewhere in this method with no managed exception (a native/IL2CPP
+            // crash gives no stack), so every candidate call is isolated with a log
+            // on both sides. Whichever "...OK" line is missing on the next repro
+            // identifies the exact crashing call. Remove once found.
+            Utility.Log($"[AddDropoffEntry] start, drugType={_data.drugType}");
+
+            Utility.Log("[AddDropoffEntry] calling GetStash()...");
             var stash = GetStash();
-            UnityEngine.Vector3 poi = stash != null ? stash.transform.position : UnityEngine.Vector3.zero;
+            Utility.Log($"[AddDropoffEntry] GetStash() OK, stash={(stash != null ? "non-null" : "null")}");
+
+            UnityEngine.Vector3 poi = UnityEngine.Vector3.zero;
+            if (stash != null)
+            {
+                Utility.Log("[AddDropoffEntry] reading stash.transform.position...");
+                poi = stash.transform.position;
+                Utility.Log($"[AddDropoffEntry] stash.transform.position OK, poi={poi}");
+            }
+
+            Utility.Log("[AddDropoffEntry] calling AddEntry()...");
             dropoffEntry = AddEntry(
                 $"Give {npc} {StashManager.StashQtyEntry.Value}x of a {item} and ${StashManager.StashCostEntry.Value}",
                 poiPosition: poi);
+            Utility.Log("[AddDropoffEntry] AddEntry() OK, done.");
         }
 
         private SupplierStash GetStash() => _data.drugType switch

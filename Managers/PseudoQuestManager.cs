@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
 using UnicornsCustomSeeds.SeedQuests;
@@ -64,9 +65,61 @@ namespace UnicornsCustomSeeds.Managers
 
             if (pseudoDropoff == null)
             {
+                NetworkSyncManager.BroadcastQuestConfig(EDrugType.Methamphetamine);
                 pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
                 pseudoDropoff?.SetDrugType(EDrugType.Methamphetamine);
             }
+        }
+
+        /// <summary>
+        /// Asynchronously creates a CustomSynthesisQuest with retry logic, mirroring
+        /// SeedQuestManager.CreateQuestAsync. Called on a client on receipt of a
+        /// [NET-QUEST] broadcast for Methamphetamine.
+        /// </summary>
+        public static void CreateQuestAsync()
+        {
+            MelonCoroutines.Start(CreateQuestCoroutine());
+        }
+
+        private static IEnumerator CreateQuestCoroutine()
+        {
+            const int maxRetries = 5;
+            int attemptCount = 0;
+
+            while (attemptCount < maxRetries)
+            {
+                attemptCount++;
+                try
+                {
+                    var existingQuest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Meth Mix") as CustomSynthesisQuest;
+                    if (existingQuest != null)
+                    {
+                        pseudoDropoff = existingQuest;
+                        IsWaitingForDropoff = true;
+                        yield break;
+                    }
+
+                    pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    pseudoDropoff?.SetDrugType(EDrugType.Methamphetamine);
+
+                    if (pseudoDropoff != null)
+                    {
+                        IsWaitingForDropoff = true;
+                        yield break;
+                    }
+                }
+                catch
+                {
+                    // Silently fail - components are still initializing
+                }
+
+                if (attemptCount < maxRetries)
+                {
+                    yield return new WaitForSeconds(1f);
+                }
+            }
+
+            Utility.Error($"[PseudoQuestManager.CreateQuestAsync] Failed to load quest after {maxRetries} attempts");
         }
 
         public static void CompleteQuest()

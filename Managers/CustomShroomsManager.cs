@@ -182,7 +182,7 @@ namespace UnicornsCustomSeeds.Managers
                 Utility.Error("No available dead drop for syringe placement.");
             }
 
-            //NetworkSyncManager.Broadcast(newData);
+            NetworkSyncManager.Broadcast(newData);
         }
 
         /// <summary>

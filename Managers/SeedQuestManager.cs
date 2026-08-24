@@ -77,26 +77,10 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-        public static void BroadcastCustomQuest()
-        {
-            ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
-
-            // Append config values as comma-separated string
-            string payload = $"[NET-QUEST]{StashManager.StashCostEntry.Value},{StashManager.StashQtyEntry.Value},{StashManager.SynthesizeTime.Value}";
-
-            var props = new GenericCol.List<string>();
-            var appearance = new WeedAppearanceSettings(
-                  prodManager.DefaultWeed.MainMat.color,
-       prodManager.DefaultWeed.SecondaryMat.color,
-                  prodManager.DefaultWeed.LeafMat.color,
-                  prodManager.DefaultWeed.StemMat.color);
-
-            prodManager.CreateWeed_Server(payload, CustomSeedsManager.BASE_SEED_ID,
-      EDrugType.Marijuana, props, appearance);
-        }
+        public static void BroadcastCustomQuest() => NetworkSyncManager.BroadcastQuestConfig(EDrugType.Marijuana);
 
         /// <summary>
-        /// Asynchronously creates a CustomSeedQuest with retry logic
+        /// Asynchronously creates a CustomSynthesisQuest with retry logic
         /// Retries up to 5 times with 1 second delays if creation fails
         /// </summary>
         public static void CreateQuestAsync()

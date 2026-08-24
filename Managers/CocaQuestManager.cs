@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
 using UnicornsCustomSeeds.SeedQuests;
@@ -64,9 +65,61 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cocaDropoff == null)
             {
+                NetworkSyncManager.BroadcastQuestConfig(EDrugType.Cocaine);
                 cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
                 cocaDropoff?.SetDrugType(EDrugType.Cocaine);
             }
+        }
+
+        /// <summary>
+        /// Asynchronously creates a CustomSynthesisQuest with retry logic, mirroring
+        /// SeedQuestManager.CreateQuestAsync. Called on a client on receipt of a
+        /// [NET-QUEST] broadcast for Cocaine.
+        /// </summary>
+        public static void CreateQuestAsync()
+        {
+            MelonCoroutines.Start(CreateQuestCoroutine());
+        }
+
+        private static IEnumerator CreateQuestCoroutine()
+        {
+            const int maxRetries = 5;
+            int attemptCount = 0;
+
+            while (attemptCount < maxRetries)
+            {
+                attemptCount++;
+                try
+                {
+                    var existingQuest = S1API.Quests.QuestManager.GetQuestByName("Drop off the Cocaine Mix") as CustomSynthesisQuest;
+                    if (existingQuest != null)
+                    {
+                        cocaDropoff = existingQuest;
+                        IsWaitingForDropoff = true;
+                        yield break;
+                    }
+
+                    cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    cocaDropoff?.SetDrugType(EDrugType.Cocaine);
+
+                    if (cocaDropoff != null)
+                    {
+                        IsWaitingForDropoff = true;
+                        yield break;
+                    }
+                }
+                catch
+                {
+                    // Silently fail - components are still initializing
+                }
+
+                if (attemptCount < maxRetries)
+                {
+                    yield return new WaitForSeconds(1f);
+                }
+            }
+
+            Utility.Error($"[CocaQuestManager.CreateQuestAsync] Failed to load quest after {maxRetries} attempts");
         }
 
         public static void CompleteQuest()

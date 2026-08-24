@@ -171,7 +171,7 @@ namespace UnicornsCustomSeeds.Managers
                 Utility.Error("CustomCocaSeedsManager: No available dead drop for coca seed placement, or not server.");
             }
 
-            //NetworkSyncManager.Broadcast(newData);
+            NetworkSyncManager.Broadcast(newData);
         }
 
 #if IL2CPP

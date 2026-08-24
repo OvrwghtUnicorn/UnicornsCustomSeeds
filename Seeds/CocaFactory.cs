@@ -225,6 +225,42 @@ namespace UnicornsCustomSeeds.Seeds
             }
         }
 
+        private void GrowLabel(Transform root, string seedDefId)
+        {
+            Transform labelTransform = null;
+            var items = root.GetComponentsInChildren<Transform>();
+            foreach (var item in items)
+            {
+                //Utility.Log(item.name);
+                if (item.name == "Label")
+                {
+                    labelTransform = item.transform;
+                }
+            }
+            if (labelTransform != null)
+            {
+                labelTransform.localScale = new Vector3(1.05f, 1.05f, 2);
+                labelTransform.position = new Vector3(0, -0.05f, 0);
+                if (SeedVisualsManager.customMat == null)
+                {
+                    SeedVisualsManager.LoadSeedMaterial();
+                }
+
+                if (SeedVisualsManager.customMat != null)
+                {
+                    var rend = labelTransform.GetComponent<Renderer>();
+                    // Create an instance of the material instead of using shared
+                    rend.material = SeedVisualsManager.customMat;
+                    labelTransform.gameObject.AddComponent<SeedVialLabel>();
+                    labelTransform.name = labelTransform.name + ":" + seedDefId;
+                }
+                else
+                {
+                    Utility.Log("MATERIAL NOT LOADED!!!");
+                }
+            }
+        }
+
         /// <summary>
         /// Clones baseCocaineBaseDefinition and patches its StationItem's CookableModule.Product
         /// to point at cocaineDef. This makes the LabOven output the right mix with zero oven patching.
@@ -311,6 +347,7 @@ namespace UnicornsCustomSeeds.Seeds
             if (baseFunctionalSeedPrefab == null) throw new InvalidOperationException("Base functional seed prefab not initialized.");
             FunctionalSeed newSeed = UnityEngine.Object.Instantiate(baseFunctionalSeedPrefab, rootGameObject);
             newSeed.gameObject.name = $"{seedDefId}_Functional";
+            GrowLabel(newSeed.transform, seedDefId);
             return newSeed;
         }
 
@@ -318,6 +355,7 @@ namespace UnicornsCustomSeeds.Seeds
         {
             if (baseEquippableSeedPrefab == null) throw new InvalidOperationException("Base equippable seed prefab not initialized.");
             Equippable_Seed newEquipSeed = UnityEngine.Object.Instantiate(baseEquippableSeedPrefab, rootGameObject);
+            GrowLabel(newEquipSeed.transform, newDef.ID);
             newEquipSeed.gameObject.name = $"{newDef.ID}_Equippable";
             newEquipSeed.gameObject.layer = baseEquippableSeedPrefab.gameObject.layer;
             newEquipSeed.Seed = newDef;
@@ -330,6 +368,7 @@ namespace UnicornsCustomSeeds.Seeds
         {
             if (baseAvatarEquippablePrefab == null) throw new InvalidOperationException("Base avatar equippable prefab not initialized.");
             AvatarEquippable newAvatarEquip = UnityEngine.Object.Instantiate(baseAvatarEquippablePrefab, rootGameObject);
+            GrowLabel(newAvatarEquip.transform, newDefId);
             newAvatarEquip.gameObject.name = $"{newDefId}_AvatarEquippable";
             return newAvatarEquip;
         }
@@ -338,6 +377,7 @@ namespace UnicornsCustomSeeds.Seeds
         {
             if (baseStoredItem == null) throw new InvalidOperationException("Base stored item not initialized.");
             StoredItem newStoredItem = UnityEngine.Object.Instantiate(baseStoredItem, rootGameObject);
+            GrowLabel(newStoredItem.transform, newDefId);
             newStoredItem.gameObject.name = $"{newDefId}_StoredItem";
             return newStoredItem;
         }
