@@ -92,10 +92,8 @@ namespace UnicornsCustomSeeds.Patches
 
                     if (jArray.Count > 0 && jArray[0] is JObject first && !first.ContainsKey("variants"))
                     {
-                        Utility.Success($"Migrating {jArray.Count} legacy seed records.");
+                        Utility.Success($"Preparing to migrate {jArray.Count} legacy seed(s).");
                         seeds = MigrateLegacySeedData(json, first);
-                        File.WriteAllText(filePath, JsonConvert.SerializeObject(seeds, Formatting.Indented));
-                        Utility.Success("Save file migrated to new variants format.");
                     }
                     else
                     {
@@ -173,7 +171,10 @@ namespace UnicornsCustomSeeds.Patches
                 return seeds;
             }
 
-            CustomSeedsManager.letsMigrate = false;
+            // This branch is also a migration (mixId/seedId/price -> variants), so prices
+            // must be recomputed too. Setting this false here meant a save that migrated
+            // through this path silently kept its old, under-counted prices forever.
+            CustomSeedsManager.letsMigrate = true;
             var legacyCurrent = JsonConvert.DeserializeObject<List<LegacyUnicornSeedData>>(json) ?? new List<LegacyUnicornSeedData>();
             foreach (var l in legacyCurrent)
             {

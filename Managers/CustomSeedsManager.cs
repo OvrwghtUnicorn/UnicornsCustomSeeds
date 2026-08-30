@@ -114,19 +114,10 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     if (letsMigrate)
                     {
-                        Utility.Log($"Migrating {seed.Value.mixId} seed");
                         WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
-                        Utility.Log($"WeedDef: {weedDef?.name ?? "null"}");
                         if (weedDef != null)
                         {
                             var cost = StashManager.GetIngredientCost(weedDef);
-                            Utility.Log($"Calculated cost: {cost}");
-                            Utility.Log($"Seed variants count: {seed.Value.variants.Count}");
-                            for (int i = 0; i < seed.Value.variants.Count; i++)
-                            {
-                                var variant = seed.Value.variants[i];
-                                Utility.Log($"Variant {i}: {variant.seedId}, price: {variant.price}");
-                            }
 
                             if (seed.Value.variants.Count > 0)
                                 seed.Value.variants[0].price = cost;

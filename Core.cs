@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.TemplateUtils;
-using Il2CppScheduleOne.ObjectScripts;
+
 
 
 #if IL2CPP
@@ -14,12 +14,14 @@ using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Persistence;
+using Il2CppScheduleOne.ObjectScripts;
 #elif MONO
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Persistence;
+using ScheduleOne.ObjectScripts;
 #endif
 
 [assembly: MelonInfo(typeof(UnicornsCustomSeeds.Core), UnicornsCustomSeeds.BuildInfo.Name, UnicornsCustomSeeds.BuildInfo.Version, UnicornsCustomSeeds.BuildInfo.Author, UnicornsCustomSeeds.BuildInfo.DownloadLink)]
@@ -92,6 +94,20 @@ namespace UnicornsCustomSeeds
             CustomShroomsManager.Initialize();
             CustomCocaSeedsManager.Initialize();
             StashManager.GetAlbertsStash();
+
+            if (CustomSeedsManager.letsMigrate)
+            {
+                bool hasData = CustomSeedsManager.DiscoveredSeeds.Count > 0
+                            || CustomShroomsManager.DiscoveredShrooms.Count > 0
+                            || CustomCocaSeedsManager.DiscoveredCocaSeeds.Count > 0;
+
+                if (hasData)
+                    SaveData();
+                else
+                    Utility.Error("Core: migration was flagged but nothing loaded — skipping the save so the existing file isn't overwritten with an empty list.");
+                Utility.Success($"Successfully migrated {CustomSeedsManager.DiscoveredSeeds.Count} seed(s)");
+                CustomSeedsManager.letsMigrate = false;
+            }
         }
 
         public override void OnSceneWasLoaded(int buildIndex, string sceneName)
@@ -117,7 +133,6 @@ namespace UnicornsCustomSeeds
             if (CustomCocaSeedsManager.factory == null && baseCocaSeed != null && baseCocaLeaf != null && baseCocaBase != null)
             {
                 CustomCocaSeedsManager.factory = new CocaFactory(baseCocaSeed, baseCocaLeaf, baseCocaBase);
-                Utility.Log("Core: CocaFactory initialized.");
             }
             else if (CustomCocaSeedsManager.factory == null)
             {
@@ -134,6 +149,7 @@ namespace UnicornsCustomSeeds
                 CustomCocaSeedsManager.ClearAll();
                 UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
+                StashManager.ClearCaches();
             }
             else
             {

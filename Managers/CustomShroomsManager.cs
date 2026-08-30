@@ -38,6 +38,7 @@ using ScheduleOne.NPCs.CharacterClasses;
 using ScheduleOne.ObjectScripts;
 using ScheduleOne.PlayerScripts;
 using ScheduleOne.Product;
+using ScheduleOne.Quests;
 using ScheduleOne.StationFramework;
 using ScheduleOne.UI.Shop;
 using ScheduleOne.UI.Phone;

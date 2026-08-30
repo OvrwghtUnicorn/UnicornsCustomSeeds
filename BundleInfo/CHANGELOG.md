@@ -1,3 +1,9 @@
+# Version 1.1.2
+- Updated AssetBundle loader to cache the bundle to prevent bundles not loading on game boot
+- [Lumahex](https://www.nexusmods.com/profile/Lumahex/mods) updated the mod to work with version 0.4.6f13
+- Updated price calculation for custom seeds to be more fair and balanced
+- Updated save file structure to support the addition of future drugs
+
 # Version 1.1.1
 - Fixed bug where createseed method crashes when trying to update delivery list
 

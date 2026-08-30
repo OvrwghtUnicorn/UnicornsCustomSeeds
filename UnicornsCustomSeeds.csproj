@@ -70,17 +70,26 @@
 
 	<!--Packages-->
 	<ItemGroup>
-		<PackageReference Include="Krafs.Publicizer" Version="2.3.0">
+		<PackageReference Include="Krafs.Publicizer" Version="2.3.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="S1API.Forked" Version="3.0.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+		<PackageReference Include="S1API.Forked" Version="3.2.0" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->
   <ItemGroup Condition="'$(Configuration)' == 'MONO'">
     <Publicize Include="Assembly-CSharp" />
     <Publicize Include="ScheduleOne.Core" />
+
+    <!-- Publicizing a C# event also exposes its compiler-generated backing field, which
+         then collides with the event itself (CS0229: "ambiguity between StorageEntity.onClosed
+         and StorageEntity.onClosed"). Keep these events non-publicized so `+=` resolves to
+         the event. IL2CPP is unaffected because it does not publicize at all. -->
+    <DoNotPublicize Include="Assembly-CSharp:ScheduleOne.Storage.StorageEntity.onOpened" />
+    <DoNotPublicize Include="Assembly-CSharp:ScheduleOne.Storage.StorageEntity.onClosed" />
+    <DoNotPublicize Include="Assembly-CSharp:ScheduleOne.Storage.StorageEntity.onContentsChanged" />
   </ItemGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
