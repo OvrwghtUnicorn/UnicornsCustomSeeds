@@ -2,6 +2,8 @@ using S1API.Quests;
 using S1API.Saveables;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.TemplateUtils;
+using UnityEngine;
+
 
 
 #if IL2CPP
@@ -15,130 +17,84 @@ using ScheduleOne.Product;
 namespace UnicornsCustomSeeds.SeedQuests
 {
     /// <summary>
-    /// Generic synthesis quest used by all drug types (Weed, Shrooms, Coca, Pseudo).
-    /// The EDrugType stored in _data.drugType drives the title, description, and
-    /// which NPC / stash is referenced.
+    /// Shared base for the four per-drug synthesis quests. Holds only plumbing that is
+    /// genuinely identical across drugs (save field, dropoff entry construction); every
+    /// drug-specific value is an abstract member implemented as a constant by the
+    /// subclasses in SynthesisQuestVariants.cs.
+    ///
+    /// WHY NOT ONE GENERIC CLASS DRIVEN BY _data.drugType:
+    /// S1API reads quest properties at points the mod does not control, and some of those
+    /// reads happen before any post-construction setter can run:
+    ///
+    ///   - QuestIcon is read ONLY inside the Quest constructor (v3.0.0 Quest.cs:128, :154)
+    ///     and baked into IconPrefab / the POI prefab. Never re-read.
+    ///   - Title/Description are read in the constructor too, then re-read later by
+    ///     CreateInternal() -> InitializeQuest(), so they *sometimes* self-correct.
+    ///   - Quest entry text is baked by AddEntry() during OnCreated/OnLoaded.
+    ///
+    /// The previous design set the drug type via SetDrugType() AFTER CreateQuest<T>()
+    /// returned, so every one of those reads saw the field's initializer and rendered the
+    /// quest as weed/Albert. Subclassing fixed the icon (a constant needs no instance
+    /// state) but the drugType-derived title/description/NPC stayed wrong.
+    ///
+    /// Constants resolved through virtual dispatch have no ordering hazard at all — C#
+    /// dispatches to the derived override even when called from a base constructor — so
+    /// every drug-specific member below is abstract rather than a switch on saved state.
     /// </summary>
-    public class CustomSynthesisQuest : Quest
+    public abstract class CustomSynthesisQuest : Quest
     {
+        // Retained for save-schema stability only. Nothing displayed is derived from it;
+        // see class remarks. Kept so existing SynthesisQuestData.json files continue to
+        // load and write unchanged rather than forcing another save migration.
         [SaveableField("SynthesisQuestData")]
         private CustomSynthesisQuestData _data = new CustomSynthesisQuestData();
 
         public QuestEntry dropoffEntry;
 
-        protected override string Title => GetTitle();
-        protected override string Description => GetDescription();
+        /// <summary>Supplier's display name, e.g. "Albert".</summary>
+        protected abstract string NpcName { get; }
 
-        private string GetTitle()
-        {
-            return _data.drugType switch
-            {
-                EDrugType.Marijuana      => "Drop off the Mix",
-                EDrugType.Shrooms        => "Drop off the Shroom Mix",
-                EDrugType.Cocaine        => "Drop off the Cocaine Mix",
-                EDrugType.Methamphetamine => "Drop off the Meth Mix",
-                _                        => "Drop off the Mix",
-            };
-        }
+        /// <summary>Mix noun used in copy, e.g. "weed mix".</summary>
+        protected abstract string ItemName { get; }
 
-        private string GetDescription()
-        {
-            string npc  = GetNPCName();
-            string item = GetItemName();
-            return $"Take {StashManager.StashQtyEntry.Value}x of your {item} and ${StashManager.StashCostEntry.Value} to {npc}'s supply stash";
-        }
+        /// <summary>That supplier's stash, resolved lazily — may be null early in load.</summary>
+        protected abstract SupplierStash Stash { get; }
 
-        private string GetNPCName() => _data.drugType switch
-        {
-            EDrugType.Marijuana       => "Albert",
-            EDrugType.Shrooms         => "Phil",
-            EDrugType.Cocaine         => "Salvador",
-            EDrugType.Methamphetamine => "Shirley",
-            _                         => "the supplier",
-        };
+        protected override string Description =>
+            $"Take {StashManager.StashQtyEntry.Value}x of your {ItemName} and ${StashManager.StashCostEntry.Value} to {NpcName}'s supply stash";
 
-        private string GetItemName() => _data.drugType switch
-        {
-            EDrugType.Marijuana       => "weed mix",
-            EDrugType.Shrooms         => "shroom mix",
-            EDrugType.Cocaine         => "cocaine mix",
-            EDrugType.Methamphetamine => "meth mix",
-            _                         => "mix",
-        };
-
-        private string GetStashDescription()
-        {
-            return _data.drugType switch
-            {
-                EDrugType.Marijuana       => StashManager.albertsStash?.transform.position.ToString() ?? "",
-                EDrugType.Shrooms         => PhilStashManager.philsStash?.transform.position.ToString() ?? "",
-                EDrugType.Cocaine         => SalvadorStashManager.salvadorsStash?.transform.position.ToString() ?? "",
-                EDrugType.Methamphetamine => ShirleyStashManager.shirleysStash?.transform.position.ToString() ?? "",
-                _                         => "",
-            };
-        }
-
-        public void SetDrugType(EDrugType drugType)
-        {
-            _data.drugType = drugType;
-        }
+        /// <summary>
+        /// Retained so the quest managers compile unchanged and SynthesisQuestData.json
+        /// keeps round-tripping. The value no longer drives any displayed property — the
+        /// concrete subclass does.
+        /// </summary>
+        public void SetDrugType(EDrugType drugType) => _data.drugType = drugType;
 
         protected override void OnCreated()
         {
             if (QuestEntries.Count == 0)
-            {
-                Utility.Log("[OnCreated]");
                 AddDropoffEntry();
-            }
         }
 
         protected override void OnLoaded()
         {
             if (QuestEntries.Count == 0)
-            {
-                Utility.Log("[OnLoaded]");
                 AddDropoffEntry();
-            }
         }
 
         private void AddDropoffEntry()
         {
-            string npc  = GetNPCName();
-            string item = GetItemName();
+            // Stash is resolved lazily and is not guaranteed to exist yet — on a joining
+            // client this runs before the stash scan completes. Fall back to Vector3.zero
+            // rather than dereferencing null.
+            SupplierStash stash = Stash;
+            Vector3 poi = stash != null ? stash.transform.position : Vector3.zero;
 
-            // Temporary diagnostic bracketing — a client-side crash was landing
-            // somewhere in this method with no managed exception (a native/IL2CPP
-            // crash gives no stack), so every candidate call is isolated with a log
-            // on both sides. Whichever "...OK" line is missing on the next repro
-            // identifies the exact crashing call. Remove once found.
-            Utility.Log($"[AddDropoffEntry] start, drugType={_data.drugType}");
-
-            Utility.Log("[AddDropoffEntry] calling GetStash()...");
-            var stash = GetStash();
-            Utility.Log($"[AddDropoffEntry] GetStash() OK, stash={(stash != null ? "non-null" : "null")}");
-
-            UnityEngine.Vector3 poi = UnityEngine.Vector3.zero;
-            if (stash != null)
-            {
-                Utility.Log("[AddDropoffEntry] reading stash.transform.position...");
-                poi = stash.transform.position;
-                Utility.Log($"[AddDropoffEntry] stash.transform.position OK, poi={poi}");
-            }
-
-            Utility.Log("[AddDropoffEntry] calling AddEntry()...");
             dropoffEntry = AddEntry(
-                $"Give {npc} {StashManager.StashQtyEntry.Value}x of a {item} and ${StashManager.StashCostEntry.Value}",
+                $"Give {NpcName} {StashManager.StashQtyEntry.Value}x of a {ItemName} and ${StashManager.StashCostEntry.Value}",
                 poiPosition: poi);
-            Utility.Log("[AddDropoffEntry] AddEntry() OK, done.");
-        }
 
-        private SupplierStash GetStash() => _data.drugType switch
-        {
-            EDrugType.Marijuana       => StashManager.GetSupplierStash(),
-            EDrugType.Shrooms         => PhilStashManager.GetSupplierStash(),
-            EDrugType.Cocaine         => SalvadorStashManager.GetSupplierStash(),
-            EDrugType.Methamphetamine => ShirleyStashManager.GetSupplierStash(),
-            _                         => null,
-        };
+            Utility.Log($"[{GetType().Name}] dropoff entry added (npc={NpcName}, stash={(stash != null ? "found" : "null")}).");
+        }
     }
 }

@@ -23,7 +23,11 @@ namespace UnicornsCustomSeeds.Managers
         public static Sprite baseLiquidMethSprite;
         public static Sprite baseCocaLeafSprite;
         public static Sprite baseCocaBaseSprite;
-        public static Sprite seedIcon;
+        public static Sprite baseQuestIconSprite;
+        public static Sprite weedQuestIconSprite;
+        public static Sprite methQuestIconSprite;
+        public static Sprite shroomQuestIconSprite;
+        public static Sprite cocaineQuestIconSprite;
 
         public enum BlendMode { Lerp, Multiply, Add, Screen }
         public static BlendMode blendMode = BlendMode.Lerp;
@@ -101,12 +105,44 @@ namespace UnicornsCustomSeeds.Managers
                     UnityEngine.Object.DontDestroyOnLoad(baseCocaBaseSprite);
                 }
 
-                Sprite seedIconSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("seedicon.png", "customshaders");
+                Sprite BaseQuestIconSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("basequest_icon.png", "customshaders");
 
-                if (seedIconSprite != null)
+                if (BaseQuestIconSprite != null)
                 {
-                    seedIcon = seedIconSprite;
-                    UnityEngine.Object.DontDestroyOnLoad(seedIcon);
+                    baseQuestIconSprite = BaseQuestIconSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(baseQuestIconSprite);
+                }
+
+                Sprite WeedQuestSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("weedquest_icon.png", "customshaders");
+
+                if (WeedQuestSprite != null)
+                {
+                    weedQuestIconSprite = WeedQuestSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(weedQuestIconSprite);
+                }
+
+                Sprite MethQuestSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("methquest_icon.png", "customshaders");
+
+                if (MethQuestSprite != null)
+                {
+                    methQuestIconSprite = MethQuestSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(methQuestIconSprite);
+                }
+
+                Sprite ShroomQuestSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("shroomquest_icon.png", "customshaders");
+
+                if (ShroomQuestSprite != null)
+                {
+                    shroomQuestIconSprite = ShroomQuestSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(shroomQuestIconSprite);
+                }
+
+                Sprite CocaineQuestSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("cocainequest_icon.png", "customshaders");
+
+                if (CocaineQuestSprite != null)
+                {
+                    cocaineQuestIconSprite = CocaineQuestSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(cocaineQuestIconSprite);
                 }
 
                 Shader labelGradient = AssetBundleUtils.LoadAssetFromBundle<Shader>("labelgradient.shader", "customshaders");
@@ -365,19 +401,36 @@ namespace UnicornsCustomSeeds.Managers
             int width = Mathf.FloorToInt(spriteRect.width * spriteTexture.width);
             int height = Mathf.FloorToInt(spriteRect.height * spriteTexture.height);
 
+            // ── TEMPORARY PROFILING ────────────────────────────────────────────
+            // Profiling put ~295ms in a single icon generation. Split the stages to
+            // find whether the cost is the CPU pixel loop (a shader would fix it) or
+            // the GetPixels/Apply interop+GPU transfers (a shader would NOT).
+            // Remove this block once the hot stage is identified.
+            var swGet = System.Diagnostics.Stopwatch.StartNew();
             Color[] spritePixels = spriteTexture.GetPixels(
                 Mathf.FloorToInt(spriteRect.x * spriteTexture.width),
                 Mathf.FloorToInt(spriteRect.y * spriteTexture.height),
                 width,
                 height
             );
+            swGet.Stop();
 
+            var swFill = System.Diagnostics.Stopwatch.StartNew();
             FillKeyColorGaps(spritePixels, width, height, topColor, bottomColor, keyColor, tolerance);
+            swFill.Stop();
 
+            var swWrite = System.Diagnostics.Stopwatch.StartNew();
             Texture2D copiedTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
             copiedTexture.SetPixels(spritePixels);
             copiedTexture.Apply();
+            swWrite.Stop();
             copiedTexture.name = baseIcon.name + "_KeyColorFill";
+
+            Utility.Log($"[PROFILE icon '{baseIcon.name}' {width}x{height}] " +
+                        $"GetPixels={swGet.ElapsedMilliseconds}ms | " +
+                        $"FillKeyColorGaps={swFill.ElapsedMilliseconds}ms | " +
+                        $"newTexture+SetPixels+Apply={swWrite.ElapsedMilliseconds}ms | " +
+                        $"rotation={(Mathf.Approximately(rotationDegrees, 0f) ? "none" : rotationDegrees + "deg")}");
 
             if (!Mathf.Approximately(rotationDegrees, 0f))
             {
@@ -399,28 +452,64 @@ namespace UnicornsCustomSeeds.Managers
         /// instead of aliasing; alpha is ignored for the match itself since the placeholder is
         /// always painted fully opaque.
         /// </summary>
+        /// <summary>
+        /// HOT PATH — runs once per pixel of a full icon (1,048,576 at 1024x1024).
+        ///
+        /// Every UnityEngine helper called here crosses the IL2CPP interop boundary. The
+        /// original version used Color.Lerp, Mathf.Clamp01, Mathf.Sqrt (via
+        /// ColorDistanceRgb) and 4x Mathf.Lerp — about 6 interop transitions per pixel, or
+        /// ~6 million for one icon. Profiling measured 251ms in this method alone.
+        ///
+        /// Everything below is therefore plain C# arithmetic. Do NOT reintroduce
+        /// Mathf/Color helper calls inside these loops.
+        ///
+        /// The squared-distance early-out matters as much as the inlining: most pixels are
+        /// nowhere near the key colour, so they bail before the sqrt ever runs.
+        /// </summary>
         private static void FillKeyColorGaps(Color[] pixels, int width, int height, Color top, Color bottom, Color keyColor, float tolerance)
         {
+            if (pixels == null || width <= 0 || height <= 0 || tolerance <= 0f) return;
+
+            float keyR = keyColor.r, keyG = keyColor.g, keyB = keyColor.b;
+            float topR = top.r,    topG = top.g,    topB = top.b,    topA = top.a;
+            float botR = bottom.r, botG = bottom.g, botB = bottom.b, botA = bottom.a;
+
+            float tolSq = tolerance * tolerance;
+            float invTolerance = 1f / tolerance;
+            int denom = height - 1 <= 0 ? 1 : height - 1;
+
             for (int y = 0; y < height; y++)
             {
-                float t = (float)y / (float)(height - 1 <= 0 ? 1 : (height - 1));
-                Color grad = Color.Lerp(bottom, top, t);
+                float t = (float)y / denom;
+                float gradR = botR + (topR - botR) * t;
+                float gradG = botG + (topG - botG) * t;
+                float gradB = botB + (topB - botB) * t;
+                float gradA = botA + (topA - botA) * t;
 
                 int row = y * width;
                 for (int x = 0; x < width; x++)
                 {
                     int idx = row + x;
-                    var dst = pixels[idx];
+                    Color dst = pixels[idx];
 
-                    float dist = ColorDistanceRgb(dst, keyColor);
-                    float weight = 1f - Mathf.Clamp01(dist / tolerance);
+                    float dr = dst.r - keyR;
+                    float dg = dst.g - keyG;
+                    float db = dst.b - keyB;
+                    float distSq = dr * dr + dg * dg + db * db;
+
+                    // Outside the tolerance radius the weight would clamp to <= 0.
+                    if (distSq >= tolSq) continue;
+
+                    float weight = 1f - (float)Math.Sqrt(distSq) * invTolerance;
                     if (weight <= 0f) continue;
 
-                    pixels[idx] = new Color(
-                        Mathf.Lerp(dst.r, grad.r, weight),
-                        Mathf.Lerp(dst.g, grad.g, weight),
-                        Mathf.Lerp(dst.b, grad.b, weight),
-                        Mathf.Lerp(dst.a, grad.a, weight));
+                    // Mutate the local struct and write it back, rather than calling the
+                    // Color constructor, to keep the whole body interop-free.
+                    dst.r += (gradR - dst.r) * weight;
+                    dst.g += (gradG - dst.g) * weight;
+                    dst.b += (gradB - dst.b) * weight;
+                    dst.a += (gradA - dst.a) * weight;
+                    pixels[idx] = dst;
                 }
             }
         }

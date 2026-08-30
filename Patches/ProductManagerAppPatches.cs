@@ -104,7 +104,7 @@ namespace UnicornsCustomSeeds.Patches
             try
             {
                 // Ensure sprite is loaded
-                if (SeedVisualsManager.seedIcon == null)
+                if (SeedVisualsManager.baseQuestIconSprite == null)
                 {
                     SeedVisualsManager.LoadSeedMaterial();
                 }
@@ -113,9 +113,9 @@ namespace UnicornsCustomSeeds.Patches
 
                 if (labelImage != null)
                 {
-                    if (SeedVisualsManager.seedIcon != null)
+                    if (SeedVisualsManager.baseQuestIconSprite != null)
                     {
-                        labelImage.sprite = SeedVisualsManager.seedIcon;
+                        labelImage.sprite = SeedVisualsManager.baseQuestIconSprite;
                         labelImage.color = Color.white;
                     }
                     else
@@ -151,9 +151,9 @@ namespace UnicornsCustomSeeds.Patches
                 try
                 {
                     Image labelImage = indicator.transform.GetChild(0).GetComponent<Image>();
-                    if (labelImage != null && SeedVisualsManager.seedIcon != null)
+                    if (labelImage != null && SeedVisualsManager.baseQuestIconSprite != null)
                     {
-                        labelImage.sprite = SeedVisualsManager.seedIcon;
+                        labelImage.sprite = SeedVisualsManager.baseQuestIconSprite;
                         labelImage.color = Color.white;
                         pendingIndicators.RemoveAt(i);
                     }

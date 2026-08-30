@@ -146,43 +146,6 @@ namespace UnicornsCustomSeeds.Seeds
             InjectCustomRecipeInternal(pseudoVariants, customLiquidMeth, methId);
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // AddPseudoToChemistryStations (static)
-        //
-        // Adds a custom pseudo ID to the HardFilter whitelists on every
-        // ChemistryStation ingredient slot in the scene so the UI accepts it.
-        // Mirrors CocaFactory.AddLeafToCauldrons.
-        // ─────────────────────────────────────────────────────────────────────
-        public static void AddPseudoToChemistryStations(QualityItemDefinition customPseudo)
-        {
-            ChemistryStation[] stations = GameObject.FindObjectsOfType<ChemistryStation>();
-            int patched = 0;
-            foreach (ChemistryStation station in stations)
-            {
-                foreach (ItemSlot slot in station.IngredientSlots)
-                {
-                    foreach (ItemFilter filter in slot.HardFilters)
-                    {
-#if IL2CPP
-                        ItemFilter_ID idFilter = filter.TryCast<ItemFilter_ID>();
-#elif MONO
-                        ItemFilter_ID idFilter = filter as ItemFilter_ID;
-#endif
-                        if (idFilter != null && !idFilter.IDs.Contains(customPseudo.ID))
-                        {
-                            idFilter.IDs.Add(customPseudo.ID);
-                            patched++;
-                        }
-                    }
-                }
-            }
-            Utility.Log($"PseudoFactory: Added '{customPseudo.ID}' to {patched} chemistry station slot filter(s).");
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // Private helpers
-        // ─────────────────────────────────────────────────────────────────────
-
         private LiquidMethDefinition CloneCustomLiquidMeth(MethDefinition methDef)
         {
             LiquidMethDefinition clone = UnityEngine.Object.Instantiate(baseLiquidMethDefinition);
