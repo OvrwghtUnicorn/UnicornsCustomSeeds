@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
@@ -13,6 +13,7 @@ using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.Misc;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
@@ -20,12 +21,16 @@ using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Quests;
 using Il2CppScheduleOne.UI.Shop;
+using Il2CppScheduleOne.UI.Phone;
+using Il2CppScheduleOne.UI.Phone.Messages;
+using Il2CppScheduleOne.UI.Phone.Delivery;
 #elif MONO
 using FishNet;
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Economy;
 using ScheduleOne.ItemFramework;
+using ScheduleOne.Management;
 using ScheduleOne.Messaging;
 using ScheduleOne.Misc;
 using ScheduleOne.NPCs.CharacterClasses;
@@ -33,6 +38,9 @@ using ScheduleOne.PlayerScripts;
 using ScheduleOne.Product;
 using ScheduleOne.Quests;
 using ScheduleOne.UI.Shop;
+using ScheduleOne.UI.Phone;
+using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.UI.Phone.Delivery;
 #endif
 
 namespace UnicornsCustomSeeds.Managers
@@ -43,7 +51,7 @@ namespace UnicornsCustomSeeds.Managers
         public const string BASE_LEAF_ID = "cocaleaf";
         public const string BASE_BASE_ID = "cocainebase";
 
-        // ?? Test mix IDs — replace placeholders with real IDs as they are discovered ??
+        // ?? Test mix IDs ï¿½ replace placeholders with real IDs as they are discovered ??
         // OnCocaSynthesisRequested iterates this array and synthesizes the first mix
         // that does not yet have a coca seed in the Registry.
         public static readonly string[] TEST_COCAINE_MIX_IDS = new string[]
@@ -80,60 +88,23 @@ namespace UnicornsCustomSeeds.Managers
                 if (salvador.MSGConversation != null)
                     ConversationManager.RegisterConversation("Salvador", salvador.MSGConversation);
 
-                SetupSalvadorConversation();
+                //CocaQuestManager.Init();
+
+                foreach (var kvp in DiscoveredCocaSeeds)
+                {
+#if IL2CPP
+                    var existingSeed = Registry.GetItem<Il2CppScheduleOne.Growing.SeedDefinition>(kvp.Value.seedId);
+#elif MONO
+                    var existingSeed = Registry.GetItem<ScheduleOne.Growing.SeedDefinition>(kvp.Value.seedId);
+#endif
+                    if (existingSeed != null)
+                        CreateShopListing(existingSeed, kvp.Value.price);
+                }
             }
             else
             {
                 Utility.Error("CustomCocaSeedsManager: Could not find Salvador NPC in scene. Verify Salvador is present and unlocked.");
             }
-        }
-
-        private static void SetupSalvadorConversation()
-        {
-            MSGConversation convo = ConversationManager.GetConversation("Salvador");
-            if (convo != null)
-            {
-                SendableMessage sendable = convo.CreateSendableMessage("Synthesize Coca");
-                sendable.onSent += (Action)OnCocaSynthesisRequested;
-                Utility.Log("CustomCocaSeedsManager: 'Synthesize Coca' message registered on Salvador.");
-            }
-            else
-            {
-                Utility.Error("CustomCocaSeedsManager: Could not get Salvador conversation from ConversationManager.");
-            }
-        }
-
-        public static void OnCocaSynthesisRequested()
-        {
-            // Iterate the mix array and synthesize the first one not yet in the Registry.
-            ProductDefinition target = null;
-            foreach (string mixId in TEST_COCAINE_MIX_IDS)
-            {
-                if (DiscoveredCocaSeeds.ContainsKey(mixId))
-                    continue; // already synthesized this session
-
-                if (Registry.ItemExists(mixId + "_customcocaseed"))
-                    continue; // already in Registry from a previous session
-
-                var def = Registry.GetItem<ProductDefinition>(mixId);
-                if (def == null)
-                {
-                    Utility.Log($"CustomCocaSeedsManager: Mix '{mixId}' not found in Registry — skipping.");
-                    continue;
-                }
-
-                target = def;
-                break;
-            }
-
-            if (target == null)
-            {
-                Utility.Log("CustomCocaSeedsManager: All test mixes already synthesized or not found in Registry.");
-                ConversationManager.SendMessage("Salvador", "All available coca seeds have already been synthesized.");
-                return;
-            }
-
-            MelonCoroutines.Start(CreateCocaSeed(target));
         }
 
         public static IEnumerator CreateCocaSeed(ProductDefinition cocaineDef)
@@ -162,6 +133,9 @@ namespace UnicornsCustomSeeds.Managers
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             Utility.Log($"CustomCocaSeedsManager: Registered seed '{newSeed.ID}' in Registry.");
 
+            Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+            CustomSeedsManager.AddSeedToPots(newSeed);
+
             // Add the custom leaf ID to all cauldron ingredient slot filters
             // so the Cauldron UI accepts it (mirrors AddSyringeToSpawnStations pattern)
             var customLeaf = Registry.GetItem<QualityItemDefinition>($"{cocaineDef.ID}_customcocaleaf");
@@ -170,16 +144,15 @@ namespace UnicornsCustomSeeds.Managers
             else
                 Utility.Error("CustomCocaSeedsManager: Could not resolve custom leaf from Registry after registration.");
 
-            // EDrugType.Cocaine — verify member name via Enum.GetNames(typeof(EDrugType)) at startup
-            // Fallback: use EDrugType.Weed (value 0) as placeholder if Cocaine member does not exist
+            newSeed.BasePurchasePrice += StashManager.GetIngredientCost(cocaineDef);
             UnicornSeedData newData = new UnicornSeedData
             {
-                seedId = newSeed.ID,
                 mixId = cocaineDef.ID,
                 drugType = EDrugType.Cocaine,
-                price = 100f,
             };
+            newData.SetSingleVariant(BASE_SEED_ID, newSeed.ID, newSeed.BasePurchasePrice);
             DiscoveredCocaSeeds.Add(newData.mixId, newData);
+            CreateShopListing(newSeed, newData.price);
 
             DeadDrop randomDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomDrop != null && InstanceFinder.IsServer)
@@ -197,6 +170,55 @@ namespace UnicornsCustomSeeds.Managers
             {
                 Utility.Error("CustomCocaSeedsManager: No available dead drop for coca seed placement, or not server.");
             }
+
+            //NetworkSyncManager.Broadcast(newData);
+        }
+
+#if IL2CPP
+        public static void CreateShopListing(Il2CppScheduleOne.Growing.SeedDefinition newSeed, float price = 10f)
+#elif MONO
+        public static void CreateShopListing(ScheduleOne.Growing.SeedDefinition newSeed, float price = 10f)
+#endif
+        {
+            if (SalvadorShop == null) return;
+
+            ShopListing newListing = new ShopListing();
+            newListing.name = $"{newSeed.ID} (${price}) (Coca, )";
+            newListing.Item = newSeed;
+            newListing.IconTint = new Color(0.9f, 0.9f, 0.9f, 1f);
+            newListing.MinimumGameCreationVersion = 27;
+            newListing.DefaultStock = 1000;
+            newListing.CurrentStock = 100000;
+            newListing.CanBeDelivered = true;
+            SalvadorShop.Listings.Add(newListing);
+            SalvadorShop.CreateListingUI(newListing);
+            CreatePhoneShopListing(newSeed);
+            CreateDeliveryListing(newListing);
+            SalvadorShop.RefreshShownItems();
+        }
+
+#if IL2CPP
+        public static void CreatePhoneShopListing(Il2CppScheduleOne.Growing.SeedDefinition newSeed)
+#elif MONO
+        public static void CreatePhoneShopListing(ScheduleOne.Growing.SeedDefinition newSeed)
+#endif
+        {
+            if (salvador == null) return;
+            PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newSeed);
+            var updated = HarmonyLib.CollectionExtensions.AddItem(salvador.SupplierData.DeliveryShopListings, newEntry);
+            salvador.SupplierData.DeliveryShopListings = updated.ToArray();
+        }
+
+        public static void CreateDeliveryListing(ShopListing newListing)
+        {
+            if (SalvadorShop == null) return;
+            var deliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop(SalvadorShop.ShopName);
+            if (deliveryShop == null) return;
+            ListingEntry entry = UnityEngine.Object.Instantiate<ListingEntry>(deliveryShop.ListingEntryPrefab, deliveryShop.ListingContainer);
+            entry.Initialize(newListing);
+            entry.onQuantityChanged.AddListener((UnityEngine.Events.UnityAction)deliveryShop.RefreshCart);
+            deliveryShop.listingEntries.Add(entry);
+            deliveryShop.ListingContainer.sizeDelta = new Vector2(deliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(deliveryShop.listingEntries.Count / 2.0) * 60f);
         }
 
         public static void ClearAll()
@@ -222,7 +244,7 @@ namespace UnicornsCustomSeeds.Managers
 
             if (factory == null)
             {
-                Utility.Error("CustomCocaSeedsManager.RestoreLeafFilters: factory is null — cannot restore leaf filters.");
+                Utility.Error("CustomCocaSeedsManager.RestoreLeafFilters: factory is null ï¿½ cannot restore leaf filters.");
                 return;
             }
 
@@ -237,7 +259,7 @@ namespace UnicornsCustomSeeds.Managers
                     var cocaineDef = Registry.GetItem<ProductDefinition>(mixId);
                     if (cocaineDef == null)
                     {
-                        Utility.Error($"CustomCocaSeedsManager.RestoreLeafFilters: ProductDefinition '{mixId}' not in Registry — skipping.");
+                        Utility.Error($"CustomCocaSeedsManager.RestoreLeafFilters: ProductDefinition '{mixId}' not in Registry ï¿½ skipping.");
                         continue;
                     }
 
@@ -249,10 +271,15 @@ namespace UnicornsCustomSeeds.Managers
                     }
 
                     Singleton<Registry>.Instance.AddToRegistry(newSeed);
+#if IL2CPP
+                    CreateShopListing((Il2CppScheduleOne.Growing.SeedDefinition)(object)newSeed, kvp.Value.price);
+#elif MONO
+                    CreateShopListing((ScheduleOne.Growing.SeedDefinition)(object)newSeed, kvp.Value.price);
+#endif
                     Utility.Log($"CustomCocaSeedsManager.RestoreLeafFilters: Rebuilt seed '{newSeed.ID}'.");
                 }
 
-                // Always re-add to cauldron filters — they are runtime objects reset each load.
+                // Always re-add to cauldron filters ï¿½ they are runtime objects reset each load.
                 string leafId = $"{mixId}_customcocaleaf";
                 var leaf = Registry.GetItem<QualityItemDefinition>(leafId);
                 if (leaf != null)

@@ -161,10 +161,14 @@ namespace UnicornsCustomSeeds.Managers
 
         public static float GetIngredientCost(ProductDefinition product)
         {
-            if (ingredientCostCache.ContainsKey(product.ID)) return ingredientCostCache[product.ID];
+            if (ingredientCostCache.ContainsKey(product.ID)) {
+                Utility.Log($"Ingredient cost for {product.ID} retrieved from cache: {ingredientCostCache[product.ID]}");
+                return ingredientCostCache[product.ID];
+            }
 
             var ingredients = GetRecipe(product);
             float totalCost = CalculateTotalCost(ingredients);
+            Utility.Log($"Calculated ingredient cost for {product.ID}: {totalCost}");
             ingredientCostCache.Add(product.ID, totalCost);
             return totalCost;
         }
@@ -179,21 +183,23 @@ namespace UnicornsCustomSeeds.Managers
             float totalCost = CalculateTotalCost(ingredients);
 
         }
-
         private static float CalculateTotalCost(List<PropertyItemDefinition> ingredients)
         {
             float totalCost = 0f;
             foreach (var ingredient in ingredients)
             {
+
                 if (ingredient is not ProductDefinition)
                 {
                     totalCost += ingredient.BasePurchasePrice;
                 }
 
-                if(ingredient is ProductDefinition prodDef)
+                if (ingredient is WeedDefinition prodDef)
                 {
+                    Utility.Log($"Calculating cost for ingredient: {prodDef.ID + "seed"}");
                     var seed = Registry.GetItem<SeedDefinition>(prodDef.ID + "seed");
-                    totalCost += seed.BasePurchasePrice;
+                    if (seed != null)
+                        totalCost += seed.BasePurchasePrice;
                 }
             }
             return totalCost;
@@ -209,6 +215,10 @@ namespace UnicornsCustomSeeds.Managers
             var result = new List<PropertyItemDefinition>();
             var visited = new HashSet<string>();
             DeepSearchRecursive(product, result, visited);
+            for (int i = 0; i < result.Count; i++)
+            {
+                Utility.Log($"Ingredient {i + 1}: {result[i].ID}");
+            }
             ingredientsCache.Add(product.ID, result);
             return result;
         }

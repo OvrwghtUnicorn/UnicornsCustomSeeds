@@ -34,7 +34,7 @@ namespace UnicornsCustomSeeds
         public const string Description = "Your good buddy Unicorn can help you synthesize seeds";
         public const string Author = "OverweightUnicorn";
         public const string Company = "UnicornsCanMod";
-        public const string Version = "1.1.1";
+        public const string Version = "1.1.2";
         public const string DownloadLink = null;
     }
 
@@ -44,18 +44,6 @@ namespace UnicornsCustomSeeds
         public override void OnInitializeMelon()
         {
             AssetBundleUtils.Initialize(this);
-            var method = typeof(Cauldron).GetMethod(
-                "RpcLogic___FinishCookOperation_2166136261",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance
-            );
-
-            MelonLogger.Msg(method == null ? "METHOD NOT FOUND" : $"Found: {method}");
-
-            var patchInfo = HarmonyLib.Harmony.GetPatchInfo(method);
-            if (patchInfo == null)
-                MelonLogger.Msg("No patches applied");
-            else
-                MelonLogger.Msg($"Prefixes: {patchInfo.Prefixes.Count}, Postfixes: {patchInfo.Postfixes.Count}");
         }
 
         public override void OnLateInitializeMelon()

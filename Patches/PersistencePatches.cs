@@ -90,18 +90,12 @@ namespace UnicornsCustomSeeds.Patches
                 {
                     JArray jArray = JArray.Parse(json);
 
-                    // Legacy migration: old format used "weedId" instead of "mixId"
-                    if (jArray.Count > 0 && jArray[0] is JObject first && first.ContainsKey("weedId"))
+                    if (jArray.Count > 0 && jArray[0] is JObject first && !first.ContainsKey("variants"))
                     {
-                        CustomSeedsManager.letsMigrate = true;
-                        var legacy = JsonConvert.DeserializeObject<List<LegacySeedData>>(json) ?? new List<LegacySeedData>();
-                        Utility.Success($"Migrating {legacy.Count} legacy seed records.");
-
-                        foreach (var l in legacy)
-                            seeds.Add(new UnicornSeedData { seedId = l.seedId, mixId = l.weedId, drugType = EDrugType.Marijuana, price = l.price });
-
+                        Utility.Success($"Migrating {jArray.Count} legacy seed records.");
+                        seeds = MigrateLegacySeedData(json, first);
                         File.WriteAllText(filePath, JsonConvert.SerializeObject(seeds, Formatting.Indented));
-                        Utility.Success("Save file migrated to new format.");
+                        Utility.Success("Save file migrated to new variants format.");
                     }
                     else
                     {
@@ -145,10 +139,72 @@ namespace UnicornsCustomSeeds.Patches
                             CustomCocaSeedsManager.DiscoveredCocaSeeds.Add(data.mixId, data);
                         break;
 
+                    //case EDrugType.Methamphetamine:
+                    //    if (!CustomPseudoManager.DiscoveredPseudoSeeds.ContainsKey(data.mixId))
+                    //        CustomPseudoManager.DiscoveredPseudoSeeds.Add(data.mixId, data);
+                    //    break;
+
                     default:
                         Utility.Error($"PersistencePatches: Unknown EDrugType '{data.drugType}' for seed '{data.seedId}' — skipped.");
                         break;
                 }
+            }
+        }
+
+        private static List<UnicornSeedData> MigrateLegacySeedData(string json, JObject first)
+        {
+            var seeds = new List<UnicornSeedData>();
+
+            if (first.ContainsKey("weedId"))
+            {
+                CustomSeedsManager.letsMigrate = true;
+                var legacy = JsonConvert.DeserializeObject<List<LegacySeedData>>(json) ?? new List<LegacySeedData>();
+                foreach (var l in legacy)
+                {
+                    var data = new UnicornSeedData
+                    {
+                        mixId = l.weedId,
+                        drugType = EDrugType.Marijuana,
+                    };
+                    data.SetSingleVariant(CustomSeedsManager.BASE_SEED_ID, l.seedId, l.price);
+                    seeds.Add(data);
+                }
+
+                return seeds;
+            }
+
+            CustomSeedsManager.letsMigrate = false;
+            var legacyCurrent = JsonConvert.DeserializeObject<List<LegacyUnicornSeedData>>(json) ?? new List<LegacyUnicornSeedData>();
+            foreach (var l in legacyCurrent)
+            {
+                var data = new UnicornSeedData
+                {
+                    mixId = l.mixId,
+                    drugType = l.drugType,
+                };
+
+                string baseItemId = ResolveLegacyBaseItemId(l);
+                data.SetSingleVariant(baseItemId, l.seedId, l.price);
+                seeds.Add(data);
+            }
+
+            return seeds;
+        }
+
+        private static string ResolveLegacyBaseItemId(LegacyUnicornSeedData data)
+        {
+            switch (data.drugType)
+            {
+                case EDrugType.Marijuana:
+                    return CustomSeedsManager.BASE_SEED_ID;
+                case EDrugType.Shrooms:
+                    return CustomShroomsManager.BASE_SYRINGE_ID;
+                case EDrugType.Cocaine:
+                    return CustomCocaSeedsManager.BASE_SEED_ID;
+                //case EDrugType.Methamphetamine:
+                //    return CustomPseudoManager.InferPseudoBaseIdFromSeedId(data.seedId);
+                default:
+                    return string.Empty;
             }
         }
 
@@ -240,6 +296,9 @@ namespace UnicornsCustomSeeds.Patches
 
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
 
+                try { Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed); }
+                catch (Exception ex) { Utility.PrintException(ex); }
+
                 // AddLeafToCauldrons must be called after the leaf is registered so all
                 // cauldrons in the scene accept the custom leaf in their ingredient slot filters.
                 // CreateCocaSeedDefinition registers the leaf internally, so it is available here.
@@ -255,4 +314,95 @@ namespace UnicornsCustomSeeds.Patches
             catch (Exception ex) { Utility.PrintException(ex); }
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Patch: ProductManager.CreateMeth — re-create pseudo chains after load
+    //
+    // Fires when ProductManager registers a meth product during the load replay.
+    // DiscoveredPseudoSeeds is already populated by LoadDiscoveredSeeds at this
+    // point (StartGame Postfix runs before the product replay).
+    // If the mix is in DiscoveredPseudoSeeds and the pseudo is not yet in the
+    // Registry, rebuild the full chain via PseudoFactory.
+    //
+    // NOTE: Chemistry stations are not yet spawned when this fires, so filter
+    // and recipe restoration is deferred to RestorePseudoFilters() which runs
+    // in CustomPseudoManager.Initialize() on onLoadComplete.
+    // ─────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // Patch: ProductManager.CreateShroom_Server — re-create syringe chains after load
+    //
+    // Fires whenever a shroom mix is registered during the load replay.
+    // DiscoveredShrooms is already populated by LoadDiscoveredSeeds at this
+    // point. If the mix is in DiscoveredShrooms and the syringe is not yet in
+    // the Registry, rebuild the full syringe + spawn + colony chain.
+    // ─────────────────────────────────────────────────────────────────────────
+    [HarmonyPatch(typeof(ProductManager), nameof(ProductManager.CreateShroom_Server))]
+    public static class Patch_ProductManager_CreateShroom
+    {
+        public static void Postfix(
+            string name, string id,
+            EDrugType type, List<string> properties, ShroomAppearanceSettings appearance)
+        {
+            string syringeId = id + "_customsyringedefinition";
+            if (Registry.ItemExists(syringeId)) return;
+            if (!CustomShroomsManager.DiscoveredShrooms.TryGetValue(id, out var data)) return;
+
+            if (CustomShroomsManager.factory == null)
+            {
+                Utility.Error($"Patch_ProductManager_CreateShroom: factory is null for '{id}'.");
+                return;
+            }
+
+            try
+            {
+                SporeSyringeDefinition newSyringe = CustomShroomsManager.SyringeDefinitionLoader(data);
+                if (newSyringe != null)
+                    Utility.Log($"Patch_ProductManager_CreateShroom: Reloaded syringe '{newSyringe.ID}'.");
+            }
+            catch (Exception ex) { Utility.PrintException(ex); }
+        }
+    }
+
+//    [HarmonyPatch(typeof(ProductManager), "CreateMeth")]
+//    public static class Patch_ProductManager_CreateMeth
+//    {
+//        public static void Postfix(
+//            NetworkConnection conn, string name, string id,
+//            EDrugType type, List<string> properties, MethAppearanceSettings appearance)
+//        {
+//            if (!CustomPseudoManager.DiscoveredPseudoSeeds.TryGetValue(id, out var data)) return;
+
+//            if (CustomPseudoManager.factory == null)
+//            {
+//                // PseudoFactory is initialized slightly later from the main-scene coroutine.
+//                // RestorePseudoFilters() on onLoadComplete will rebuild the pseudo variants.
+//                return;
+//            }
+
+//            try
+//            {
+//#if IL2CPP
+//                MethDefinition methDef = Registry.GetItem<ProductDefinition>(id)?.TryCast<MethDefinition>();
+//#elif MONO
+//                MethDefinition methDef = Registry.GetItem<MethDefinition>(id);
+//#endif
+//                if (methDef == null)
+//                {
+//                    Utility.Error($"Patch_ProductManager_CreateMeth: Could not resolve MethDefinition '{id}'.");
+//                    return;
+//                }
+
+//                foreach (var variant in data.variants)
+//                {
+//                    if (Registry.ItemExists(variant.seedId))
+//                        continue;
+
+//                    CustomPseudoManager.factory.CreatePseudoChain(methDef, variant.baseItemId);
+//                }
+
+//                Utility.Log($"Patch_ProductManager_CreateMeth: Rebuilt pseudo chain for '{id}'.");
+//            }
+//            catch (Exception ex) { Utility.PrintException(ex); }
+//        }
+//    }
 }

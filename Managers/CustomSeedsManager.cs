@@ -114,11 +114,22 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     if (letsMigrate)
                     {
+                        Utility.Log($"Migrating {seed.Value.mixId} seed");
                         WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
+                        Utility.Log($"WeedDef: {weedDef?.name ?? "null"}");
                         if (weedDef != null)
                         {
                             var cost = StashManager.GetIngredientCost(weedDef);
-                            seed.Value.price = cost;
+                            Utility.Log($"Calculated cost: {cost}");
+                            Utility.Log($"Seed variants count: {seed.Value.variants.Count}");
+                            for (int i = 0; i < seed.Value.variants.Count; i++)
+                            {
+                                var variant = seed.Value.variants[i];
+                                Utility.Log($"Variant {i}: {variant.seedId}, price: {variant.price}");
+                            }
+
+                            if (seed.Value.variants.Count > 0)
+                                seed.Value.variants[0].price = cost;
                             customDef.BasePurchasePrice = cost;
                         }
                     }
@@ -251,11 +262,10 @@ namespace UnicornsCustomSeeds.Managers
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
             UnicornSeedData newSeedData = new UnicornSeedData
             {
-                seedId = newSeed.ID,
                 mixId = weedDef.ID,
                 drugType = EDrugType.Marijuana,
-                price = price,
             };
+            newSeedData.SetSingleVariant(BASE_SEED_ID, newSeed.ID, price);
             DiscoveredSeeds.Add(newSeedData.mixId, newSeedData);
             CreateShopListing(newSeed, price);
             AddSeedToPots(newSeed);
@@ -323,10 +333,10 @@ namespace UnicornsCustomSeeds.Managers
             albertDeliveryShop.listingEntries.Add(listingEntry);
             albertDeliveryShop.ListingContainer.sizeDelta = new Vector2(albertDeliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(albertDeliveryShop.listingEntries.Count / 2.0) * 60f);
         }
-        
+
         public static void CreatePhoneShopListing(SeedDefinition customDef)
         {
-            if (ConversationManager.albert != null && ConversationManager.albert.SupplierData != null)
+            if (ConversationManager.albert != null)
             {
                 PhoneShopInterface.Listing newSeed = new PhoneShopInterface.Listing(customDef);
                 var updatedItems = HarmonyLib.CollectionExtensions.AddItem(ConversationManager.albert.SupplierData.DeliveryShopListings, newSeed);

@@ -5,8 +5,6 @@ using MelonLoader;
 using UnityEngine;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
-using Il2CppScheduleOne.Quests;
-using Il2CppScheduleOne.StationFramework;
 
 
 #if IL2CPP
@@ -16,24 +14,35 @@ using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Economy;
 using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.Messaging;
 using Il2CppScheduleOne.NPCs.CharacterClasses;
+using Il2CppScheduleOne.ObjectScripts;
 using Il2CppScheduleOne.PlayerScripts;
 using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.Quests;
 using Il2CppScheduleOne.StationFramework;
 using Il2CppScheduleOne.UI.Shop;
+using Il2CppScheduleOne.UI.Phone;
+using Il2CppScheduleOne.UI.Phone.Messages;
+using Il2CppScheduleOne.UI.Phone.Delivery;
 #elif MONO
 using FishNet;
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Economy;
 using ScheduleOne.ItemFramework;
+using ScheduleOne.Management;
 using ScheduleOne.Messaging;
 using ScheduleOne.NPCs.CharacterClasses;
+using ScheduleOne.ObjectScripts;
 using ScheduleOne.PlayerScripts;
 using ScheduleOne.Product;
 using ScheduleOne.StationFramework;
 using ScheduleOne.UI.Shop;
+using ScheduleOne.UI.Phone;
+using ScheduleOne.UI.Phone.Messages;
+using ScheduleOne.UI.Phone.Delivery;
 #endif
 
 namespace UnicornsCustomSeeds.Managers
@@ -64,8 +73,20 @@ namespace UnicornsCustomSeeds.Managers
                 if (phil.MSGConversation != null)
                     ConversationManager.RegisterConversation("Phil", phil.MSGConversation);
 
-                // Add sendable message for testing
-                SetupPhilConversation();
+                //ShroomQuestManager.Init();
+
+                // Reload any syringes that were discovered in a previous session
+                foreach (var kvp in DiscoveredShrooms)
+                {
+                    if (!Registry.ItemExists(kvp.Value.seedId))
+                        SyringeDefinitionLoader(kvp.Value);
+                    else
+                    {
+                        var existing = Registry.GetItem<SporeSyringeDefinition>(kvp.Value.seedId);
+                        AddSyringeToSpawnStations(existing);
+                        CreateShopListing(existing, kvp.Value.price);
+                    }
+                }
             }
             else
             {
@@ -73,26 +94,37 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-        private static void SetupPhilConversation()
+        /// <summary>
+        /// Rebuilds a SporeSyringeDefinition from a saved UnicornSeedData record.
+        /// Called by the persistence patch after the game replays CreateShroom on load.
+        /// </summary>
+        public static SporeSyringeDefinition SyringeDefinitionLoader(UnicornSeedData data)
         {
-            MSGConversation convo = ConversationManager.GetConversation("Phil");
-            if (convo != null)
+            if (factory == null)
             {
-                SendableMessage sendable = convo.CreateSendableMessage("Synthesize Shrooms");
-                sendable.onSent += (Action)OnShroomSynthesisRequested;
+                Utility.Error($"SyringeDefinitionLoader: factory is null for '{data.mixId}'.");
+                return null;
             }
-        }
 
-        public static void OnShroomSynthesisRequested()
-        {
-            // TESTING: hardcoded to ultramonkey
-            ShroomDefinition shroomDef = Registry.GetItem<ShroomDefinition>("ultramonkey");
+            ShroomDefinition shroomDef = Registry.GetItem<ShroomDefinition>(data.mixId);
             if (shroomDef == null)
             {
-                Utility.Error("CustomShroomsManager: Could not find ultramonkey ShroomDefinition.");
-                return;
+                Utility.Error($"SyringeDefinitionLoader: Could not resolve ShroomDefinition '{data.mixId}'.");
+                return null;
             }
-            MelonCoroutines.Start(CreateSyringe(shroomDef));
+
+            SporeSyringeDefinition newSyringe = factory.CreateSyringeDefinition(shroomDef);
+            if (newSyringe == null) return null;
+
+            Singleton<Registry>.Instance.AddToRegistry(newSyringe);
+
+            try { Singleton<ManagementUtilities>.Instance.MushroomSpawns.Add(newSyringe.SpawnDefinition); }
+            catch (Exception ex) { Utility.PrintException(ex); }
+
+            AddSyringeToSpawnStations(newSyringe);
+            CreateShopListing(newSyringe, data.price);
+            Utility.Log($"SyringeDefinitionLoader: Reloaded syringe '{newSyringe.ID}'.");
+            return newSyringe;
         }
 
         public static void StartSyringeCreation(ShroomDefinition shroomDef)
@@ -119,19 +151,21 @@ namespace UnicornsCustomSeeds.Managers
             Utility.Log($"Created new syringe definition: {newSyringe.ID} for shroom: {shroomDef.ID}");
             Singleton<Registry>.Instance.AddToRegistry(newSyringe);
 
+            Singleton<ManagementUtilities>.Instance.MushroomSpawns.Add(newSyringe.SpawnDefinition);
+            AddSpawnToMushroomBeds(newSyringe.SpawnDefinition);
+
             // Add custom syringe to all spawn stations so they accept it
             AddSyringeToSpawnStations(newSyringe);
-
+            newSyringe.BasePurchasePrice += StashManager.GetIngredientCost(shroomDef);
             UnicornSeedData newData = new UnicornSeedData
             {
-                seedId = newSyringe.ID,
                 mixId = shroomDef.ID,
                 drugType = EDrugType.Shrooms,
-                price = 10f,
             };
+            newData.SetSingleVariant(BASE_SYRINGE_ID, newSyringe.ID, newSyringe.BasePurchasePrice);
             DiscoveredShrooms.Add(newData.mixId, newData);
+            CreateShopListing(newSyringe, newData.price);
 
-            // Place in a dead drop for testing retrieval
             DeadDrop randomDrop = DeadDrop.GetRandomEmptyDrop(Player.Local.transform.position);
             if (randomDrop != null && InstanceFinder.IsServer)
             {
@@ -145,6 +179,30 @@ namespace UnicornsCustomSeeds.Managers
             else
             {
                 Utility.Error("No available dead drop for syringe placement.");
+            }
+
+            //NetworkSyncManager.Broadcast(newData);
+        }
+
+        /// <summary>
+        /// Pushes a new ShroomSpawnDefinition into every MushroomBed already present in the
+        /// scene, mirroring CustomSeedsManager.AddSeedToPots. MushroomBedConfiguration.Spawn.Options
+        /// is only populated from ManagementUtilities.MushroomSpawns when a bed's config first
+        /// initializes, so beds already spawned need the new spawn definition pushed directly.
+        /// </summary>
+        public static void AddSpawnToMushroomBeds(ShroomSpawnDefinition newSpawn)
+        {
+            var beds = GameObject.FindObjectsOfType<MushroomBed>();
+            foreach (MushroomBed bed in beds)
+            {
+#if IL2CPP
+                if (bed.Configuration.TryCast<MushroomBedConfiguration>() is MushroomBedConfiguration config)
+                {
+#elif MONO
+                if (bed.Configuration is MushroomBedConfiguration config) {
+#endif
+                    config.Spawn.Options.Add(newSpawn);
+                }
             }
         }
 
@@ -170,6 +228,45 @@ namespace UnicornsCustomSeeds.Managers
                     }
                 }
             }
+        }
+
+        public static void CreateShopListing(SporeSyringeDefinition newSyringe, float price = 10f)
+        {
+            if (PhilShop == null) return;
+
+            ShopListing newListing = new ShopListing();
+            newListing.name = $"{newSyringe.ID} (${price}) (Shrooms, )";
+            newListing.Item = newSyringe;
+            newListing.IconTint = new Color(0.6f, 0.2f, 0.8f, 1f);
+            newListing.MinimumGameCreationVersion = 27;
+            newListing.DefaultStock = 1000;
+            newListing.CurrentStock = 100000;
+            newListing.CanBeDelivered = true;
+            PhilShop.Listings.Add(newListing);
+            PhilShop.CreateListingUI(newListing);
+            CreatePhoneShopListing(newSyringe);
+            CreateDeliveryListing(newListing);
+            PhilShop.RefreshShownItems();
+        }
+
+        public static void CreatePhoneShopListing(SporeSyringeDefinition newSyringe)
+        {
+            if (phil == null) return;
+            PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newSyringe);
+            var updated = HarmonyLib.CollectionExtensions.AddItem(phil.SupplierData.DeliveryShopListings, newEntry);
+            phil.SupplierData.DeliveryShopListings = updated.ToArray();
+        }
+
+        public static void CreateDeliveryListing(ShopListing newListing)
+        {
+            if (PhilShop == null) return;
+            var deliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop(PhilShop.ShopName);
+            if (deliveryShop == null) return;
+            ListingEntry entry = UnityEngine.Object.Instantiate<ListingEntry>(deliveryShop.ListingEntryPrefab, deliveryShop.ListingContainer);
+            entry.Initialize(newListing);
+            entry.onQuantityChanged.AddListener((UnityEngine.Events.UnityAction)deliveryShop.RefreshCart);
+            deliveryShop.listingEntries.Add(entry);
+            deliveryShop.ListingContainer.sizeDelta = new Vector2(deliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(deliveryShop.listingEntries.Count / 2.0) * 60f);
         }
 
         public static void ClearAll()
