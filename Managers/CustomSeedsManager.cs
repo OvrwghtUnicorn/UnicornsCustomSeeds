@@ -326,11 +326,11 @@ namespace UnicornsCustomSeeds.Managers
         
         public static void CreatePhoneShopListing(SeedDefinition customDef)
         {
-            if (ConversationManager.albert != null)
+            if (ConversationManager.albert != null && ConversationManager.albert.SupplierData != null)
             {
                 PhoneShopInterface.Listing newSeed = new PhoneShopInterface.Listing(customDef);
-                var updatedItems = HarmonyLib.CollectionExtensions.AddItem(ConversationManager.albert.OnlineShopItems, newSeed);
-                ConversationManager.albert.OnlineShopItems = updatedItems.ToArray();
+                var updatedItems = HarmonyLib.CollectionExtensions.AddItem(ConversationManager.albert.SupplierData.DeliveryShopListings, newSeed);
+                ConversationManager.albert.SupplierData.DeliveryShopListings = updatedItems.ToArray();
             }
         }
 
