@@ -1,4 +1,5 @@
 ﻿using MelonLoader;
+using System.Collections;
 using UnityEngine.Events;
 using UnicornsCustomSeeds.Seeds;
 using Newtonsoft.Json;
@@ -15,6 +16,9 @@ using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.Product;
+using Il2CppScheduleOne.StationFramework;
+using Il2CppScheduleOne.UI.Stations;
 #elif MONO
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
@@ -22,6 +26,9 @@ using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Persistence;
 using ScheduleOne.ObjectScripts;
+using ScheduleOne.Product;
+using ScheduleOne.StationFramework;
+using ScheduleOne.UI.Stations;
 #endif
 
 [assembly: MelonInfo(typeof(UnicornsCustomSeeds.Core), UnicornsCustomSeeds.BuildInfo.Name, UnicornsCustomSeeds.BuildInfo.Version, UnicornsCustomSeeds.BuildInfo.Author, UnicornsCustomSeeds.BuildInfo.DownloadLink)]
@@ -70,6 +77,7 @@ namespace UnicornsCustomSeeds
                     all.AddRange(CustomSeedsManager.DiscoveredSeeds.Values);
                     all.AddRange(CustomShroomsManager.DiscoveredShrooms.Values);
                     all.AddRange(CustomCocaSeedsManager.DiscoveredCocaSeeds.Values);
+                    all.AddRange(CustomPseudoManager.DiscoveredPseudoSeeds.Values);
 
                     string json = JsonConvert.SerializeObject(all, Formatting.Indented);
                     File.WriteAllText(Path.Combine(saveFolder, "DiscoveredCustomSeeds.json"), json);
@@ -93,6 +101,7 @@ namespace UnicornsCustomSeeds
             CustomSeedsManager.Initialize();
             CustomShroomsManager.Initialize();
             CustomCocaSeedsManager.Initialize();
+            CustomPseudoManager.Initialize();
             StashManager.GetAlbertsStash();
 
             if (CustomSeedsManager.letsMigrate)
@@ -147,6 +156,7 @@ namespace UnicornsCustomSeeds
                 CustomSeedsManager.ClearAll();
                 CustomShroomsManager.ClearAll();
                 CustomCocaSeedsManager.ClearAll();
+                CustomPseudoManager.ClearAll();
                 UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
                 StashManager.ClearCaches();
@@ -158,7 +168,67 @@ namespace UnicornsCustomSeeds
                 {
                     SeedVisualsManager.LoadSeedMaterial();
                 }
+
+                // PseudoFactory needs ChemistryStationCanvas.Recipes which is not populated
+                // at OnSceneWasLoaded time. Poll until it is ready, then initialize.
+                if (CustomPseudoManager.factory == null)
+                    MelonCoroutines.Start(InitPseudoFactoryWhenReady());
             }
+        }
+
+        private IEnumerator InitPseudoFactoryWhenReady()
+        {
+            // Poll once per frame until ChemistryStationCanvas has at least one recipe loaded.
+            int timeoutFrames = 1800; // ~30 seconds at 60 fps — hard bail-out
+            while (timeoutFrames-- > 0)
+            {
+                bool ready = false;
+                try
+                {
+                    ready = Singleton<ChemistryStationCanvas>.Instance?.Recipes?.Count > 0;
+                }
+                catch { /* singleton not initialised yet */ }
+
+                if (ready) break;
+                yield return null;
+            }
+
+            if (timeoutFrames <= 0)
+            {
+                Utility.Error("Core: Timed out waiting for ChemistryStationCanvas.Recipes — PseudoFactory not initialized.");
+                yield break;
+            }
+
+            try
+            {
+                var basePseudo    = Registry.GetItem<QualityItemDefinition>(CustomPseudoManager.PSEUDO_BASE_ID);
+                var rawLiquidMeth = Registry.GetItem(CustomPseudoManager.BASE_LIQUIDMETH_ID);
+#if IL2CPP
+                LiquidMethDefinition baseLiquidMeth = rawLiquidMeth?.TryCast<LiquidMethDefinition>();
+#elif MONO
+                LiquidMethDefinition baseLiquidMeth = rawLiquidMeth as LiquidMethDefinition;
+#endif
+                StationRecipe baseRecipe = null;
+                foreach (StationRecipe r in Singleton<ChemistryStationCanvas>.Instance.Recipes)
+                {
+                    if (r.Product?.Item?.ID == CustomPseudoManager.BASE_LIQUIDMETH_ID)
+                    {
+                        baseRecipe = r;
+                        break;
+                    }
+                }
+
+                if (basePseudo != null && baseLiquidMeth != null && baseRecipe != null)
+                {
+                    CustomPseudoManager.factory = new PseudoFactory(basePseudo, baseLiquidMeth, baseRecipe);
+                    Utility.Log("Core: PseudoFactory initialized.");
+                }
+                else
+                {
+                    Utility.Error($"Core: PseudoFactory init failed — pseudo={basePseudo != null}, liquidmeth={baseLiquidMeth != null}, recipe={baseRecipe != null}");
+                }
+            }
+            catch (Exception ex) { Utility.PrintException(ex); }
         }
     }
 }

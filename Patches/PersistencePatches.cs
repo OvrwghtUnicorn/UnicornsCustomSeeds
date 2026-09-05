@@ -137,10 +137,10 @@ namespace UnicornsCustomSeeds.Patches
                             CustomCocaSeedsManager.DiscoveredCocaSeeds.Add(data.mixId, data);
                         break;
 
-                    //case EDrugType.Methamphetamine:
-                    //    if (!CustomPseudoManager.DiscoveredPseudoSeeds.ContainsKey(data.mixId))
-                    //        CustomPseudoManager.DiscoveredPseudoSeeds.Add(data.mixId, data);
-                    //    break;
+                    case EDrugType.Methamphetamine:
+                        if (!CustomPseudoManager.DiscoveredPseudoSeeds.ContainsKey(data.mixId))
+                            CustomPseudoManager.DiscoveredPseudoSeeds.Add(data.mixId, data);
+                        break;
 
                     default:
                         Utility.Error($"PersistencePatches: Unknown EDrugType '{data.drugType}' for seed '{data.seedId}' — skipped.");
@@ -317,19 +317,6 @@ namespace UnicornsCustomSeeds.Patches
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Patch: ProductManager.CreateMeth — re-create pseudo chains after load
-    //
-    // Fires when ProductManager registers a meth product during the load replay.
-    // DiscoveredPseudoSeeds is already populated by LoadDiscoveredSeeds at this
-    // point (StartGame Postfix runs before the product replay).
-    // If the mix is in DiscoveredPseudoSeeds and the pseudo is not yet in the
-    // Registry, rebuild the full chain via PseudoFactory.
-    //
-    // NOTE: Chemistry stations are not yet spawned when this fires, so filter
-    // and recipe restoration is deferred to RestorePseudoFilters() which runs
-    // in CustomPseudoManager.Initialize() on onLoadComplete.
-    // ─────────────────────────────────────────────────────────────────────────
-    // ─────────────────────────────────────────────────────────────────────────
     // Patch: ProductManager.CreateShroom_Server — re-create syringe chains after load
     //
     // Fires whenever a shroom mix is registered during the load replay.
@@ -364,46 +351,52 @@ namespace UnicornsCustomSeeds.Patches
         }
     }
 
-//    [HarmonyPatch(typeof(ProductManager), "CreateMeth")]
-//    public static class Patch_ProductManager_CreateMeth
-//    {
-//        public static void Postfix(
-//            NetworkConnection conn, string name, string id,
-//            EDrugType type, List<string> properties, MethAppearanceSettings appearance)
-//        {
-//            if (!CustomPseudoManager.DiscoveredPseudoSeeds.TryGetValue(id, out var data)) return;
+    // ─────────────────────────────────────────────────────────────────────────
+    // Patch: ProductManager.CreateMeth — re-create pseudo chains after load
+    //
+    // Fires when ProductManager registers a meth product during the load replay.
+    // DiscoveredPseudoSeeds is already populated by LoadDiscoveredSeeds at this
+    // point (StartGame Postfix runs before the product replay).
+    // If the mix is in DiscoveredPseudoSeeds and the pseudo is not yet in the
+    // Registry, rebuild the full chain via PseudoFactory.
+    //
+    // NOTE: Chemistry stations are not yet spawned when this fires, so filter
+    // and recipe restoration is deferred to RestorePseudoFilters() which runs
+    // in CustomPseudoManager.Initialize() on onLoadComplete.
+    // ─────────────────────────────────────────────────────────────────────────
+    [HarmonyPatch(typeof(ProductManager), "CreateMeth")]
+    public static class Patch_ProductManager_CreateMeth
+    {
+        public static void Postfix(
+            NetworkConnection conn, string name, string id,
+            EDrugType type, List<string> properties, MethAppearanceSettings appearance)
+        {
+            if (Registry.ItemExists(id + "_custompseudo")) return;
+            if (!CustomPseudoManager.DiscoveredPseudoSeeds.TryGetValue(id, out var _)) return;
 
-//            if (CustomPseudoManager.factory == null)
-//            {
-//                // PseudoFactory is initialized slightly later from the main-scene coroutine.
-//                // RestorePseudoFilters() on onLoadComplete will rebuild the pseudo variants.
-//                return;
-//            }
+            if (CustomPseudoManager.factory == null)
+            {
+                Utility.Error($"Patch_ProductManager_CreateMeth: factory is null for '{id}'.");
+                return;
+            }
 
-//            try
-//            {
-//#if IL2CPP
-//                MethDefinition methDef = Registry.GetItem<ProductDefinition>(id)?.TryCast<MethDefinition>();
-//#elif MONO
-//                MethDefinition methDef = Registry.GetItem<MethDefinition>(id);
-//#endif
-//                if (methDef == null)
-//                {
-//                    Utility.Error($"Patch_ProductManager_CreateMeth: Could not resolve MethDefinition '{id}'.");
-//                    return;
-//                }
+            try
+            {
+#if IL2CPP
+                MethDefinition methDef = Registry.GetItem<ProductDefinition>(id)?.TryCast<MethDefinition>();
+#elif MONO
+                MethDefinition methDef = Registry.GetItem<MethDefinition>(id);
+#endif
+                if (methDef == null)
+                {
+                    Utility.Error($"Patch_ProductManager_CreateMeth: Could not resolve MethDefinition '{id}'.");
+                    return;
+                }
 
-//                foreach (var variant in data.variants)
-//                {
-//                    if (Registry.ItemExists(variant.seedId))
-//                        continue;
-
-//                    CustomPseudoManager.factory.CreatePseudoChain(methDef, variant.baseItemId);
-//                }
-
-//                Utility.Log($"Patch_ProductManager_CreateMeth: Rebuilt pseudo chain for '{id}'.");
-//            }
-//            catch (Exception ex) { Utility.PrintException(ex); }
-//        }
-//    }
+                CustomPseudoManager.factory.CreatePseudoChain(methDef);
+                Utility.Log($"Patch_ProductManager_CreateMeth: Rebuilt pseudo chain for '{id}'.");
+            }
+            catch (Exception ex) { Utility.PrintException(ex); }
+        }
+    }
 }
