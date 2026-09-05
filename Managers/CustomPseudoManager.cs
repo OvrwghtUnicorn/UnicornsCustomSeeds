@@ -128,7 +128,7 @@ namespace UnicornsCustomSeeds.Managers
                     yield break;
                 }
 
-                PseudoFactory.AddPseudoToChemistryStations(customPseudo);
+                //PseudoFactory.AddPseudoToChemistryStations(customPseudo);
                 float price = CalculatePseudoPrice(methDef, pseudoBaseId);
 
                 VariantSeedData variant = new VariantSeedData
@@ -229,7 +229,7 @@ namespace UnicornsCustomSeeds.Managers
                     var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
                     if (pseudo != null)
                     {
-                        PseudoFactory.AddPseudoToChemistryStations(pseudo);
+                        //PseudoFactory.AddPseudoToChemistryStations(pseudo);
                         Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Restored filters for '{variant.seedId}'.");
                     }
                     else

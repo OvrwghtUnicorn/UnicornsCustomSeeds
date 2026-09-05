@@ -362,40 +362,6 @@ namespace UnicornsCustomSeeds.Patches
     // and recipe restoration is deferred to RestorePseudoFilters() which runs
     // in CustomPseudoManager.Initialize() on onLoadComplete.
     // ─────────────────────────────────────────────────────────────────────────
-    // ─────────────────────────────────────────────────────────────────────────
-    // Patch: ProductManager.CreateShroom_Server — re-create syringe chains after load
-    //
-    // Fires whenever a shroom mix is registered during the load replay.
-    // DiscoveredShrooms is already populated by LoadDiscoveredSeeds at this
-    // point. If the mix is in DiscoveredShrooms and the syringe is not yet in
-    // the Registry, rebuild the full syringe + spawn + colony chain.
-    // ─────────────────────────────────────────────────────────────────────────
-    [HarmonyPatch(typeof(ProductManager), nameof(ProductManager.CreateShroom_Server))]
-    public static class Patch_ProductManager_CreateShroom
-    {
-        public static void Postfix(
-            string name, string id,
-            EDrugType type, List<string> properties, ShroomAppearanceSettings appearance)
-        {
-            string syringeId = id + "_customsyringedefinition";
-            if (Registry.ItemExists(syringeId)) return;
-            if (!CustomShroomsManager.DiscoveredShrooms.TryGetValue(id, out var data)) return;
-
-            if (CustomShroomsManager.factory == null)
-            {
-                Utility.Error($"Patch_ProductManager_CreateShroom: factory is null for '{id}'.");
-                return;
-            }
-
-            try
-            {
-                SporeSyringeDefinition newSyringe = CustomShroomsManager.SyringeDefinitionLoader(data);
-                if (newSyringe != null)
-                    Utility.Log($"Patch_ProductManager_CreateShroom: Reloaded syringe '{newSyringe.ID}'.");
-            }
-            catch (Exception ex) { Utility.PrintException(ex); }
-        }
-    }
 
     [HarmonyPatch(typeof(ProductManager), "CreateMeth")]
     public static class Patch_ProductManager_CreateMeth

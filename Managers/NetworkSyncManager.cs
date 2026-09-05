@@ -313,11 +313,11 @@ namespace UnicornsCustomSeeds.Managers
 
             CustomPseudoManager.factory.InjectRecipeForMix(data, data.mixId);
 
-            foreach (var variant in data.variants)
-            {
-                var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
-                if (pseudo != null) PseudoFactory.AddPseudoToChemistryStations(pseudo);
-            }
+            //foreach (var variant in data.variants)
+            //{
+            //    var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
+            //    if (pseudo != null) PseudoFactory.AddPseudoToChemistryStations(pseudo);
+            //}
 
             Utility.Log($"NetworkSyncManager: Rebuilt pseudo chain for '{data.mixId}'.");
         }

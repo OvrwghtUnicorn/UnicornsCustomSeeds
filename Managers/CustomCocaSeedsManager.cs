@@ -221,53 +221,6 @@ namespace UnicornsCustomSeeds.Managers
             deliveryShop.ListingContainer.sizeDelta = new Vector2(deliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(deliveryShop.listingEntries.Count / 2.0) * 60f);
         }
 
-        #if IL2CPP
-        public static void CreateShopListing(Il2CppScheduleOne.Growing.SeedDefinition newSeed, float price = 10f)
-#elif MONO
-        public static void CreateShopListing(ScheduleOne.Growing.SeedDefinition newSeed, float price = 10f)
-#endif
-        {
-            if (SalvadorShop == null) return;
-
-            ShopListing newListing = new ShopListing();
-            newListing.name = $"{newSeed.ID} (${price}) (Coca, )";
-            newListing.Item = newSeed;
-            newListing.IconTint = new Color(0.9f, 0.9f, 0.9f, 1f);
-            newListing.MinimumGameCreationVersion = 27;
-            newListing.DefaultStock = 1000;
-            newListing.CurrentStock = 100000;
-            newListing.CanBeDelivered = true;
-            SalvadorShop.Listings.Add(newListing);
-            SalvadorShop.CreateListingUI(newListing);
-            CreatePhoneShopListing(newSeed);
-            CreateDeliveryListing(newListing);
-            SalvadorShop.RefreshShownItems();
-        }
-
-        #if IL2CPP
-        public static void CreatePhoneShopListing(Il2CppScheduleOne.Growing.SeedDefinition newSeed)
-#elif MONO
-        public static void CreatePhoneShopListing(ScheduleOne.Growing.SeedDefinition newSeed)
-#endif
-        {
-            if (salvador == null) return;
-            PhoneShopInterface.Listing newEntry = new PhoneShopInterface.Listing(newSeed);
-            var updated = HarmonyLib.CollectionExtensions.AddItem(salvador.SupplierData.DeliveryShopListings, newEntry);
-            salvador.SupplierData.DeliveryShopListings = updated.ToArray();
-        }
-
-        public static void CreateDeliveryListing(ShopListing newListing)
-        {
-            if (SalvadorShop == null) return;
-            var deliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop(SalvadorShop.ShopName);
-            if (deliveryShop == null) return;
-            ListingEntry entry = UnityEngine.Object.Instantiate<ListingEntry>(deliveryShop.ListingEntryPrefab, deliveryShop.ListingContainer);
-            entry.Initialize(newListing);
-            entry.onQuantityChanged.AddListener((UnityEngine.Events.UnityAction)deliveryShop.RefreshCart);
-            deliveryShop.listingEntries.Add(entry);
-            deliveryShop.ListingContainer.sizeDelta = new Vector2(deliveryShop.ListingContainer.sizeDelta.x, 230f + (float)Math.Ceiling(deliveryShop.listingEntries.Count / 2.0) * 60f);
-        }
-
         public static void ClearAll()
         {
             DiscoveredCocaSeeds.Clear();

@@ -173,7 +173,7 @@ namespace UnicornsCustomSeeds
             else
             {
                 // Reload assets when entering main scene to prevent garbage collection issues
-                if (SeedVisualsManager.seedIcon == null || SeedVisualsManager.baseSeedSprite == null)
+                if (SeedVisualsManager.seedIcons == null || SeedVisualsManager.baseSeedSprite == null)
                 {
                     SeedVisualsManager.LoadSeedMaterial();
                 }
