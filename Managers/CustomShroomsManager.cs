@@ -74,7 +74,8 @@ namespace UnicornsCustomSeeds.Managers
                 if (phil.MSGConversation != null)
                     ConversationManager.RegisterConversation("Phil", phil.MSGConversation);
 
-                //ShroomQuestManager.Init();
+                // Add sendable message for testing
+                SetupPhilConversation();
 
                 // Reload any syringes that were discovered in a previous session
                 foreach (var kvp in DiscoveredShrooms)
@@ -124,6 +125,34 @@ namespace UnicornsCustomSeeds.Managers
 
             AddSyringeToSpawnStations(newSyringe);
             CreateShopListing(newSyringe, data.price);
+            Utility.Log($"SyringeDefinitionLoader: Reloaded syringe '{newSyringe.ID}'.");
+            return newSyringe;
+        }
+
+        /// <summary>
+        /// Rebuilds a SporeSyringeDefinition from a saved UnicornSeedData record.
+        /// Called by the persistence patch after the game replays CreateShroom on load.
+        /// </summary>
+        public static SporeSyringeDefinition SyringeDefinitionLoader(UnicornSeedData data)
+        {
+            if (factory == null)
+            {
+                Utility.Error($"SyringeDefinitionLoader: factory is null for '{data.mixId}'.");
+                return null;
+            }
+
+            ShroomDefinition shroomDef = Registry.GetItem<ShroomDefinition>(data.mixId);
+            if (shroomDef == null)
+            {
+                Utility.Error($"SyringeDefinitionLoader: Could not resolve ShroomDefinition '{data.mixId}'.");
+                return null;
+            }
+
+            SporeSyringeDefinition newSyringe = factory.CreateSyringeDefinition(shroomDef);
+            if (newSyringe == null) return null;
+
+            Singleton<Registry>.Instance.AddToRegistry(newSyringe);
+            AddSyringeToSpawnStations(newSyringe);
             Utility.Log($"SyringeDefinitionLoader: Reloaded syringe '{newSyringe.ID}'.");
             return newSyringe;
         }
