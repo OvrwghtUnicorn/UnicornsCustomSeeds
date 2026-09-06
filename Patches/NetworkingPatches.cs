@@ -171,6 +171,16 @@ namespace UnicornsCustomSeeds.Patches
             if (name == null)
                 return;
 
+            // Client -> server: a client started a cauldron cook with a custom leaf.
+            // Server-only: the initiating client already swapped its own copy locally,
+            // and other clients don't create the output so they don't need it.
+            if (name.StartsWith(NetworkSyncManager.COOK_PREFIX))
+            {
+                if (InstanceFinder.IsServer)
+                    NetworkSyncManager.HandleCauldronCook(name);
+                return;
+            }
+
             if (name.StartsWith("[NET-QUEST]") && InstanceFinder.IsClientOnly)
             {
                 string parsed = name.Replace("[NET-QUEST]", "");

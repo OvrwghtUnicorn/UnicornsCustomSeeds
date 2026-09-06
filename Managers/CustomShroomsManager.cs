@@ -59,7 +59,22 @@ namespace UnicornsCustomSeeds.Managers
         public static GameObject PhilShopGo = null;
         public static Phil phil = null;
 
+        /// <summary>
+        /// See CustomSeedsManager.Initialize — this runs on the shared
+        /// LoadManager.onLoadComplete UnityEvent, where an escaping exception would abort
+        /// the remaining listeners and hang a client's load.
+        /// </summary>
         public static void Initialize()
+        {
+            try { InitializeInternal(); }
+            catch (Exception e)
+            {
+                Utility.Error("CustomShroomsManager.Initialize failed — continuing so other listeners still run.");
+                Utility.PrintException(e);
+            }
+        }
+
+        private static void InitializeInternal()
         {
             phil = GameObject.FindObjectOfType<Phil>();
             if (phil != null)

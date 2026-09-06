@@ -71,7 +71,7 @@ namespace UnicornsCustomSeeds.Managers
                 if (seedDropoff == null)
                 {
                     if (InstanceFinder.IsServer) BroadcastCustomQuest();
-                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<WeedSynthesisQuest>() as CustomSynthesisQuest;
                     seedDropoff?.SetDrugType(EDrugType.Marijuana);
                 }
             }
@@ -90,6 +90,10 @@ namespace UnicornsCustomSeeds.Managers
 
         private static IEnumerator CreateQuestCoroutine()
         {
+            // Must not create a quest mid-load — SetupJournalEntry NREs on a UI that does
+            // not exist yet. See NetworkSyncManager.IsGameLoading.
+            while (NetworkSyncManager.IsGameLoading) yield return null;
+
             const int maxRetries = 5;
             int attemptCount = 0;
 
@@ -108,7 +112,7 @@ namespace UnicornsCustomSeeds.Managers
                     }
 
                     // Try to create the quest
-                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    seedDropoff = S1API.Quests.QuestManager.CreateQuest<WeedSynthesisQuest>() as CustomSynthesisQuest;
                     seedDropoff?.SetDrugType(EDrugType.Marijuana);
 
                     if (seedDropoff != null)

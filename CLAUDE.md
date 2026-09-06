@@ -71,7 +71,9 @@ Load/migrate logic is a Harmony postfix on `LoadManager.StartGame` in `Patches/P
 `Managers/SeedVisualsManager.cs` loads an embedded AssetBundle (`Assets/customshaders`) containing icon sprites and a label gradient shader, and generates per-mix colored seed icons via CPU pixel manipulation.
 
 ### Cooking/Cauldron integration
-`Managers/ActiveCookingRegistry.cs`, `Patches/CauldronPatches.cs`, and `Patches/FinishCookingCommand.cs` track in-progress cauldron cooking sessions (mapping station GUIDs to mix IDs) so they survive save/load, persisted via `UnicornsActiveCooking.json`.
+`Managers/ActiveCookingRegistry.cs` and `Patches/CauldronPatches.cs` track in-progress cauldron cooking sessions (mapping station GUIDs to mix IDs) so they survive save/load, persisted via `UnicornsActiveCooking.json`.
+
+The mod registers **no developer console commands**. An earlier `finishcooking` command was removed: the game's `Console.AddCommand` is private and IL2CPP strips it, so invoking it via reflection throws `EntryPointNotFoundException` at runtime. Don't reintroduce console commands on the IL2CPP target without confirming the native method survives stripping.
 
 ## Historical Task Specs
 

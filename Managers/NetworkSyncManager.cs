@@ -1,15 +1,19 @@
 using System;
 using Newtonsoft.Json;
+using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.Seeds;
 using UnicornsCustomSeeds.TemplateUtils;
 
 #if IL2CPP
+using Il2Cpp;                 // global-namespace game types (GUIDManager) get this prefix
 using Il2CppFishNet;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Management;
+using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Product;
 using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
@@ -19,6 +23,8 @@ using ScheduleOne.DevUtilities;
 using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Management;
+using ScheduleOne.ObjectScripts;
+using ScheduleOne.Persistence;
 using ScheduleOne.Product;
 using GenericCol = System.Collections.Generic;
 #endif
@@ -150,6 +156,127 @@ namespace UnicornsCustomSeeds.Managers
                 pm.DefaultWeed.StemMat.color);
 
             pm.CreateWeed_Server(payload, CustomSeedsManager.BASE_SEED_ID, EDrugType.Marijuana, props, appearance);
+        }
+
+        public const string COOK_PREFIX = "[NET-COOK]";
+
+        /// <summary>
+        /// True while the client/host is still inside LoadManager's load routine.
+        ///
+        /// Quest creation must wait for this to go false. S1API's CreateQuest ->
+        /// Quest.CreateInternal -> Quest.InitializeQuest ends with:
+        ///
+        ///     if (this.ShouldQuestShowUI())
+        ///         this.SetupJournalEntry();
+        ///
+        /// and SetupJournalEntry touches the phone/journal UI, which does not exist yet
+        /// mid-load. Creating a quest then throws a NullReferenceException there and
+        /// leaves the Quest half-constructed — Quest.Quests.Add and InitializeSaveable
+        /// have already run, so it is registered but has no journal entry.
+        ///
+        /// This bites specifically on a joining client, where the [NET-QUEST] broadcast
+        /// arrives during LoadAsClient. The game defers its own load-time work the same
+        /// way (see ConfigurationReplicator, which queues onto onLoadComplete).
+        /// </summary>
+        public static bool IsGameLoading =>
+            Singleton<LoadManager>.Instance != null && Singleton<LoadManager>.Instance.IsLoading;
+
+        /// <summary>
+        /// Client -> server: "this cauldron is cooking this custom mix, swap your copy".
+        ///
+        /// CauldronTask.Success() is a PlayerTask — on a client cook, RemoveIngredients()
+        /// (and the mod's CocaineBaseDefinition swap) runs ONLY on that client. The output
+        /// is created server-side from the server's own CocaineBaseDefinition, so without
+        /// this the server hands back vanilla cocaine base.
+        ///
+        /// Rides CreateWeed_Server, which is [ServerRpc(RequireOwnership = false)] — a
+        /// client calling it executes on the server, which is the direction needed here
+        /// (unlike the [NET-JSON]/[NET-QUEST] traffic, which flows server -> clients).
+        /// </summary>
+        public static void BroadcastCauldronCook(string cauldronGuid, string mixId)
+        {
+            if (string.IsNullOrEmpty(cauldronGuid) || string.IsNullOrEmpty(mixId)) return;
+
+            try
+            {
+                ProductManager pm = NetworkSingleton<ProductManager>.Instance;
+                if (pm == null)
+                {
+                    Utility.Error("NetworkSyncManager.BroadcastCauldronCook: ProductManager instance is null.");
+                    return;
+                }
+
+                string payload = $"{COOK_PREFIX}{cauldronGuid},{mixId}";
+                var props = new GenericCol.List<string>();
+                var appearance = new WeedAppearanceSettings(
+                    pm.DefaultWeed.MainMat.color,
+                    pm.DefaultWeed.SecondaryMat.color,
+                    pm.DefaultWeed.LeafMat.color,
+                    pm.DefaultWeed.StemMat.color);
+
+                pm.CreateWeed_Server(payload, CustomSeedsManager.BASE_SEED_ID, EDrugType.Marijuana, props, appearance);
+                Utility.Log($"NetworkSyncManager: Sent cauldron cook GUID={cauldronGuid} mixId={mixId} to server.");
+            }
+            catch (Exception ex) { Utility.PrintException(ex); }
+        }
+
+        /// <summary>
+        /// Server-side handler for [NET-COOK]. Resolves the cauldron by GUID and applies
+        /// the same swap the initiating client already made locally, so
+        /// FinishCookOperation's server-side output uses the custom base.
+        /// </summary>
+        public static void HandleCauldronCook(string payload)
+        {
+            try
+            {
+                string body = payload.Substring(COOK_PREFIX.Length);
+                int comma = body.IndexOf(',');
+                if (comma <= 0)
+                {
+                    Utility.Error($"NetworkSyncManager.HandleCauldronCook: malformed payload '{body}'.");
+                    return;
+                }
+
+                string cauldronGuid = body.Substring(0, comma);
+                string mixId = body.Substring(comma + 1);
+
+                // GUIDManager.GetObject takes the runtime's own Guid type, which differs
+                // between the two targets.
+#if IL2CPP
+                Cauldron cauldron = GUIDManager.GetObject<Cauldron>(new Il2CppSystem.Guid(cauldronGuid));
+#elif MONO
+                Cauldron cauldron = GUIDManager.GetObject<Cauldron>(new Guid(cauldronGuid));
+#endif
+                if (cauldron == null)
+                {
+                    Utility.Error($"NetworkSyncManager.HandleCauldronCook: no cauldron for GUID '{cauldronGuid}'.");
+                    return;
+                }
+
+                string baseId = $"{mixId}_customcocainebase";
+                var rawBase = Registry.GetItem(baseId);
+#if IL2CPP
+                QualityItemDefinition customBase = rawBase?.TryCast<QualityItemDefinition>();
+#elif MONO
+                QualityItemDefinition customBase = rawBase as QualityItemDefinition;
+#endif
+                if (customBase == null)
+                {
+                    Utility.Error($"NetworkSyncManager.HandleCauldronCook: could not resolve '{baseId}' — server will output vanilla base.");
+                    return;
+                }
+
+                // Mirror CauldronPatches: remember the original so the shared onCookEnd
+                // listener restores it, and register so a save/reload rebuilds the swap.
+                if (!CauldronBaseSwap.OriginalBase.ContainsKey(cauldron))
+                    CauldronBaseSwap.OriginalBase[cauldron] = cauldron.CocaineBaseDefinition;
+
+                cauldron.CocaineBaseDefinition = customBase;
+                ActiveCookingRegistry.Register(cauldronGuid, mixId);
+
+                Utility.Log($"NetworkSyncManager: Server swapped cauldron {cauldronGuid} CocaineBaseDefinition -> '{customBase.ID}' for client cook.");
+            }
+            catch (Exception ex) { Utility.PrintException(ex); }
         }
 
         /// <summary>
@@ -312,12 +439,6 @@ namespace UnicornsCustomSeeds.Managers
             }
 
             CustomPseudoManager.factory.InjectRecipeForMix(data, data.mixId);
-
-            //foreach (var variant in data.variants)
-            //{
-            //    var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
-            //    if (pseudo != null) PseudoFactory.AddPseudoToChemistryStations(pseudo);
-            //}
 
             Utility.Log($"NetworkSyncManager: Rebuilt pseudo chain for '{data.mixId}'.");
         }

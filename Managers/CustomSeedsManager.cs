@@ -79,7 +79,25 @@ namespace UnicornsCustomSeeds.Managers
 #endif
 
         public static bool FirstLoad = false;
+        /// <summary>
+        /// Runs from LoadManager.onLoadComplete — a UnityEvent shared with the game's own
+        /// deferred loaders (ConfigurationReplicator queues pending field applications onto
+        /// it during load). UnityEvent.Invoke does not isolate listeners, so an exception
+        /// escaping here aborts every listener registered after us. On a client that kills
+        /// LoadManager's LoadRoutine and hangs the loading screen permanently, with a stack
+        /// pointing at whichever unrelated listener came next. Contain failures here.
+        /// </summary>
         public static void Initialize()
+        {
+            try { InitializeInternal(); }
+            catch (Exception e)
+            {
+                Utility.Error("CustomSeedsManager.Initialize failed — continuing so other listeners still run.");
+                Utility.PrintException(e);
+            }
+        }
+
+        private static void InitializeInternal()
         {
             var shopInterfaces = UnityEngine.Object.FindObjectsOfType<ShopInterface>();
             foreach (ShopInterface shopInterface in shopInterfaces)

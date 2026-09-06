@@ -9,6 +9,7 @@ using UnicornsCustomSeeds.TemplateUtils;
 
 
 #if IL2CPP
+using Il2CppFishNet;
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Growing;
@@ -19,6 +20,7 @@ using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.StationFramework;
 using Il2CppScheduleOne.UI.Stations;
 #elif MONO
+using FishNet;
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
 using ScheduleOne.Growing;
@@ -105,6 +107,13 @@ namespace UnicornsCustomSeeds
 
         public void InitMod()
         {
+            // Each Initialize() contains its own try/catch — see the remarks on
+            // CustomSeedsManager.Initialize. This method must never throw: it is a
+            // LoadManager.onLoadComplete listener, and UnityEvent.Invoke does not isolate
+            // listeners, so throwing here would abort the game's own deferred loaders and
+            // hang a client on the loading screen.
+            Utility.Log($"InitMod: start (IsServer={InstanceFinder.IsServer}, IsClientOnly={InstanceFinder.IsClientOnly}).");
+
             CustomSeedsManager.Initialize();
             CustomShroomsManager.Initialize();
             CustomCocaSeedsManager.Initialize();
@@ -173,7 +182,7 @@ namespace UnicornsCustomSeeds
             else
             {
                 // Reload assets when entering main scene to prevent garbage collection issues
-                if (SeedVisualsManager.seedIcons == null || SeedVisualsManager.baseSeedSprite == null)
+                if (SeedVisualsManager.baseQuestIconSprite == null || SeedVisualsManager.baseSeedSprite == null)
                 {
                     SeedVisualsManager.LoadSeedMaterial();
                 }

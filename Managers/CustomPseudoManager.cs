@@ -65,7 +65,22 @@ namespace UnicornsCustomSeeds.Managers
         // RestorePseudoFilters runs first so station filters and canvas recipes
         // are in place before the player can interact with any chemistry station.
         // ─────────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// See CustomSeedsManager.Initialize — this runs on the shared
+        /// LoadManager.onLoadComplete UnityEvent, where an escaping exception would abort
+        /// the remaining listeners and hang a client's load.
+        /// </summary>
         public static void Initialize()
+        {
+            try { InitializeInternal(); }
+            catch (Exception e)
+            {
+                Utility.Error("CustomPseudoManager.Initialize failed — continuing so other listeners still run.");
+                Utility.PrintException(e);
+            }
+        }
+
+        private static void InitializeInternal()
         {
             RestorePseudoFilters();
 
@@ -119,17 +134,42 @@ namespace UnicornsCustomSeeds.Managers
                 drugType = EDrugType.Methamphetamine,
             };
 
+            // Reserve the key NOW, not after the loop. The ContainsKey guard above and the
+            // dictionary write used to sit in the same frame with no yield between them, so
+            // check-then-act was atomic. Frame-spreading opened a multi-hundred-ms window
+            // between them, letting a second CreatePseudoChain for the same mix pass the
+            // guard before the first one wrote — throwing
+            // "An item with the same key has already been added".
+            // Registering the reference up front closes that window; variants are appended
+            // to this same instance below, so the dictionary sees them either way.
+            DiscoveredPseudoSeeds.Add(newData.mixId, newData);
+
+            // ── TEMPORARY PROFILING ────────────────────────────────────────────
+            // Reducing icon resolution 4x did not remove the synthesis freeze, so the
+            // cost is not necessarily the pixel loops. Time each phase separately to
+            // find where the frame actually goes before optimising anything further.
+            // Remove this block once the hot spot is identified.
+            var swTotal = System.Diagnostics.Stopwatch.StartNew();
+            long msChain = 0, msPrice = 0, msListing = 0;
+
             foreach (string pseudoBaseId in GetSupportedPseudoBaseIds())
             {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 QualityItemDefinition customPseudo = factory.CreatePseudoChain(methDef, pseudoBaseId);
+                sw.Stop(); msChain += sw.ElapsedMilliseconds;
+
                 if (customPseudo == null)
                 {
                     Utility.Error($"CustomPseudoManager: CreatePseudoChain returned null for base '{pseudoBaseId}'.");
+                    // Release the reservation made above, or this mix can never be
+                    // synthesized again this session (the guard would reject every retry).
+                    DiscoveredPseudoSeeds.Remove(newData.mixId);
                     yield break;
                 }
 
-                //PseudoFactory.AddPseudoToChemistryStations(customPseudo);
+                sw.Restart();
                 float price = CalculatePseudoPrice(methDef, pseudoBaseId);
+                sw.Stop(); msPrice += sw.ElapsedMilliseconds;
 
                 VariantSeedData variant = new VariantSeedData
                 {
@@ -139,11 +179,37 @@ namespace UnicornsCustomSeeds.Managers
                 };
                 newData.variants.Add(variant);
                 customPseudo.BasePurchasePrice = price;
+
+                sw.Restart();
                 CreateShopListing(customPseudo, variant.price);
+                sw.Stop(); msListing += sw.ElapsedMilliseconds;
+
+                // Frame-spreading, confirmed by prior diagnostic: `yield return null`
+                // correctly lands each tier on its own distinct frame (verified
+                // frame-count deltas of exactly 1), but back-to-back yields put the 3
+                // elevated-cost frames immediately adjacent with zero gap — still felt
+                // as one continuous stutter even though no single frame exceeds a 60fps
+                // budget. A real time gap between tiers, not just a frame gap, spaces the
+                // 3 cost-spikes far enough apart to read as isolated non-events instead of
+                // one continuous judder. Tune the interval to taste — it only adds
+                // (interval x2) to a synthesis that already has a 5s delay up front.
+                yield return new WaitForSeconds(0.5f);
             }
 
+            var swRecipe = System.Diagnostics.Stopwatch.StartNew();
             factory.InjectRecipeForMix(newData, methDef.ID);
-            DiscoveredPseudoSeeds.Add(newData.mixId, newData);
+            swRecipe.Stop();
+            swTotal.Stop();
+
+            Utility.Log(
+                // total now includes ~2 frames of yield return null (frame-spreading, not
+                // wasted work) — compare msChain/msPrice/msListing for actual CPU cost,
+                // not total, when judging whether this is still an improvement.
+                $"[PROFILE pseudo '{methDef.ID}'] total(incl. yields)={swTotal.ElapsedMilliseconds}ms | " +
+                $"CreatePseudoChain(x3, prefabs+icons, spread over 3 frames)={msChain}ms | " +
+                $"CalculatePseudoPrice(x3)={msPrice}ms | " +
+                $"CreateShopListing(x3)={msListing}ms | " +
+                $"InjectRecipeForMix={swRecipe.ElapsedMilliseconds}ms");
 
             string deadDropPseudoBaseId = ResolvePseudoBaseIdForQuality(quality);
             VariantSeedData deadDropVariant = newData.GetVariant(deadDropPseudoBaseId) ?? newData.variants[0];
@@ -229,8 +295,7 @@ namespace UnicornsCustomSeeds.Managers
                     var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
                     if (pseudo != null)
                     {
-                        //PseudoFactory.AddPseudoToChemistryStations(pseudo);
-                        Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Restored filters for '{variant.seedId}'.");
+                        Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Confirmed '{variant.seedId}' in Registry.");
                     }
                     else
                     {

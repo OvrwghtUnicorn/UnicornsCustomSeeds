@@ -77,7 +77,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 Utility.Log("[ShroomQuestManager.OnSent] broadcasting + creating quest on host...");
                 NetworkSyncManager.BroadcastQuestConfig(EDrugType.Shrooms);
-                shroomDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                shroomDropoff = S1API.Quests.QuestManager.CreateQuest<ShroomSynthesisQuest>() as CustomSynthesisQuest;
                 shroomDropoff?.SetDrugType(EDrugType.Shrooms);
                 Utility.Log($"[ShroomQuestManager.OnSent] host create done, shroomDropoff={(shroomDropoff == null ? "NULL — CreateQuest failed" : "ok")}");
             }
@@ -99,6 +99,10 @@ namespace UnicornsCustomSeeds.Managers
 
         private static IEnumerator CreateQuestCoroutine()
         {
+            // Must not create a quest mid-load — SetupJournalEntry NREs on a UI that does
+            // not exist yet. See NetworkSyncManager.IsGameLoading.
+            while (NetworkSyncManager.IsGameLoading) yield return null;
+
             const int maxRetries = 5;
             int attemptCount = 0;
 
@@ -115,7 +119,7 @@ namespace UnicornsCustomSeeds.Managers
                         yield break;
                     }
 
-                    shroomDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    shroomDropoff = S1API.Quests.QuestManager.CreateQuest<ShroomSynthesisQuest>() as CustomSynthesisQuest;
                     shroomDropoff?.SetDrugType(EDrugType.Shrooms);
 
                     if (shroomDropoff != null)

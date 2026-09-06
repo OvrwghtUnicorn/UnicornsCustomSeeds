@@ -66,7 +66,7 @@ namespace UnicornsCustomSeeds.Managers
             if (pseudoDropoff == null)
             {
                 NetworkSyncManager.BroadcastQuestConfig(EDrugType.Methamphetamine);
-                pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<PseudoSynthesisQuest>() as CustomSynthesisQuest;
                 pseudoDropoff?.SetDrugType(EDrugType.Methamphetamine);
             }
         }
@@ -83,6 +83,10 @@ namespace UnicornsCustomSeeds.Managers
 
         private static IEnumerator CreateQuestCoroutine()
         {
+            // Must not create a quest mid-load — SetupJournalEntry NREs on a UI that does
+            // not exist yet. See NetworkSyncManager.IsGameLoading.
+            while (NetworkSyncManager.IsGameLoading) yield return null;
+
             const int maxRetries = 5;
             int attemptCount = 0;
 
@@ -99,7 +103,7 @@ namespace UnicornsCustomSeeds.Managers
                         yield break;
                     }
 
-                    pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    pseudoDropoff = S1API.Quests.QuestManager.CreateQuest<PseudoSynthesisQuest>() as CustomSynthesisQuest;
                     pseudoDropoff?.SetDrugType(EDrugType.Methamphetamine);
 
                     if (pseudoDropoff != null)

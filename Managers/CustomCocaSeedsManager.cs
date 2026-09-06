@@ -70,7 +70,22 @@ namespace UnicornsCustomSeeds.Managers
         public static ShopInterface SalvadorShop = null;
         public static Salvador salvador = null;
 
+        /// <summary>
+        /// See CustomSeedsManager.Initialize — this runs on the shared
+        /// LoadManager.onLoadComplete UnityEvent, where an escaping exception would abort
+        /// the remaining listeners and hang a client's load.
+        /// </summary>
         public static void Initialize()
+        {
+            try { InitializeInternal(); }
+            catch (Exception e)
+            {
+                Utility.Error("CustomCocaSeedsManager.Initialize failed — continuing so other listeners still run.");
+                Utility.PrintException(e);
+            }
+        }
+
+        private static void InitializeInternal()
         {
             // Restore cauldron leaf filters for all previously discovered coca seeds.
             // Must run before Salvador setup so filters are in place regardless of

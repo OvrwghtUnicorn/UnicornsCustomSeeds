@@ -66,7 +66,7 @@ namespace UnicornsCustomSeeds.Managers
             if (cocaDropoff == null)
             {
                 NetworkSyncManager.BroadcastQuestConfig(EDrugType.Cocaine);
-                cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CocaSynthesisQuest>() as CustomSynthesisQuest;
                 cocaDropoff?.SetDrugType(EDrugType.Cocaine);
             }
         }
@@ -83,6 +83,10 @@ namespace UnicornsCustomSeeds.Managers
 
         private static IEnumerator CreateQuestCoroutine()
         {
+            // Must not create a quest mid-load — SetupJournalEntry NREs on a UI that does
+            // not exist yet. See NetworkSyncManager.IsGameLoading.
+            while (NetworkSyncManager.IsGameLoading) yield return null;
+
             const int maxRetries = 5;
             int attemptCount = 0;
 
@@ -99,7 +103,7 @@ namespace UnicornsCustomSeeds.Managers
                         yield break;
                     }
 
-                    cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CustomSynthesisQuest>() as CustomSynthesisQuest;
+                    cocaDropoff = S1API.Quests.QuestManager.CreateQuest<CocaSynthesisQuest>() as CustomSynthesisQuest;
                     cocaDropoff?.SetDrugType(EDrugType.Cocaine);
 
                     if (cocaDropoff != null)
