@@ -61,6 +61,7 @@
 		<Compile Include="Patches\SendableMessagePatch.cs" />
 		<Compile Include="SeedQuests\CustomSynthesisQuest.cs" />
 		<Compile Include="SeedQuests\CustomSynthesisQuestData.cs" />
+		<Compile Include="SeedQuests\SynthesisQuestVariants.cs" />
 		<Compile Include="Seeds\CocaFactory.cs" />
 		<Compile Include="Seeds\PseudoFactory.cs" />
 		<Compile Include="Seeds\SyringeFactory.cs" />

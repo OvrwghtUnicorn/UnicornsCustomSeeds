@@ -160,13 +160,6 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     Utility.Error("Fail");
                 }
-
-                TestIconFill("ShroomSpawn", baseShroomSpawnSprite);
-                TestIconFill("Syringe", baseSyringeSprite);
-                TestIconFill("Pseudo", basePseudoSprite);
-                TestIconFill("LiquidMeth", baseLiquidMethSprite);
-                TestIconFill("CocaLeaf", baseCocaLeafSprite);
-                TestIconFill("CocaBase", baseCocaBaseSprite);
             }
             catch (Exception e)
             {
@@ -183,37 +176,6 @@ namespace UnicornsCustomSeeds.Managers
         /// load" and "did the fill actually replace the placeholder color" without needing any
         /// factory integration or UI to look at yet.
         /// </summary>
-        private static void TestIconFill(string label, Sprite baseIcon)
-        {
-            if (baseIcon == null)
-            {
-                Utility.Log($"[SeedVisualsManager] Fill test skipped for '{label}' — base sprite not loaded.");
-                return;
-            }
-
-            Sprite filled = GenerateIconWithKeyColorFill(baseIcon, TestTopColor, TestBottomColor, FillKeyColor);
-            if (filled == null || filled.texture == null)
-            {
-                Utility.Error($"[SeedVisualsManager] Fill test FAILED for '{label}' — GenerateIconWithKeyColorFill returned null.");
-                return;
-            }
-
-            Color[] pixels = filled.texture.GetPixels();
-            int remainingKeyColorPixels = 0;
-            foreach (var p in pixels)
-            {
-                if (ColorDistanceRgb(p, FillKeyColor) < 0.05f) remainingKeyColorPixels++;
-            }
-
-            if (remainingKeyColorPixels == 0)
-            {
-                Utility.Log($"[SeedVisualsManager] Fill test PASSED for '{label}': {filled.texture.width}x{filled.texture.height}, 0 key-colored pixels remaining.");
-            }
-            else
-            {
-                Utility.Error($"[SeedVisualsManager] Fill test SUSPECT for '{label}': {filled.texture.width}x{filled.texture.height}, {remainingKeyColorPixels} pixel(s) still match FillKeyColor ('{FillKeyColorHex}') — check the source art's placeholder color/hex.");
-            }
-        }
 
         public static Sprite GenerateSpriteWithGradient(Color topColor, Color bottomColor)
         {
