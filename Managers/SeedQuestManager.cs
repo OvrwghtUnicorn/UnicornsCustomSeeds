@@ -1,4 +1,4 @@
-using UnicornsCustomSeeds.SeedQuests;
+﻿using UnicornsCustomSeeds.SeedQuests;
 using MelonLoader;
 using System.Collections;
 using UnicornsCustomSeeds.TemplateUtils;
@@ -90,10 +90,6 @@ namespace UnicornsCustomSeeds.Managers
 
         private static IEnumerator CreateQuestCoroutine()
         {
-            // Must not create a quest mid-load — SetupJournalEntry NREs on a UI that does
-            // not exist yet. See NetworkSyncManager.IsGameLoading.
-            while (NetworkSyncManager.IsGameLoading) yield return null;
-
             const int maxRetries = 5;
             int attemptCount = 0;
 
