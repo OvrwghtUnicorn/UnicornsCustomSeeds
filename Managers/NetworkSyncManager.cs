@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Newtonsoft.Json;
 using UnicornsCustomSeeds.Patches;
 using UnicornsCustomSeeds.Seeds;
@@ -13,6 +13,7 @@ using Il2CppScheduleOne.Growing;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Management;
 using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.Persistence;
 using Il2CppScheduleOne.Product;
 using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
@@ -23,6 +24,7 @@ using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Management;
 using ScheduleOne.ObjectScripts;
+using ScheduleOne.Persistence;
 using ScheduleOne.Product;
 using GenericCol = System.Collections.Generic;
 #endif
@@ -157,6 +159,27 @@ namespace UnicornsCustomSeeds.Managers
         }
 
         public const string COOK_PREFIX = "[NET-COOK]";
+
+        /// <summary>
+        /// True while the client/host is still inside LoadManager's load routine.
+        ///
+        /// Quest creation must wait for this to go false. S1API's CreateQuest ->
+        /// Quest.CreateInternal -> Quest.InitializeQuest ends with:
+        ///
+        ///     if (this.ShouldQuestShowUI())
+        ///         this.SetupJournalEntry();
+        ///
+        /// and SetupJournalEntry touches the phone/journal UI, which does not exist yet
+        /// mid-load. Creating a quest then throws a NullReferenceException there and
+        /// leaves the Quest half-constructed — Quest.Quests.Add and InitializeSaveable
+        /// have already run, so it is registered but has no journal entry.
+        ///
+        /// This bites specifically on a joining client, where the [NET-QUEST] broadcast
+        /// arrives during LoadAsClient. The game defers its own load-time work the same
+        /// way (see ConfigurationReplicator, which queues onto onLoadComplete).
+        /// </summary>
+        public static bool IsGameLoading =>
+            Singleton<LoadManager>.Instance != null && Singleton<LoadManager>.Instance.IsLoading;
 
         /// <summary>
         /// Client -> server: "this cauldron is cooking this custom mix, swap your copy".
