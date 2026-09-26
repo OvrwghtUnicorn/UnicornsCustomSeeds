@@ -388,12 +388,6 @@ namespace UnicornsCustomSeeds.Managers
             swWrite.Stop();
             copiedTexture.name = baseIcon.name + "_KeyColorFill";
 
-            Utility.Log($"[PROFILE icon '{baseIcon.name}' {width}x{height}] " +
-                        $"GetPixels={swGet.ElapsedMilliseconds}ms | " +
-                        $"FillKeyColorGaps={swFill.ElapsedMilliseconds}ms | " +
-                        $"newTexture+SetPixels+Apply={swWrite.ElapsedMilliseconds}ms | " +
-                        $"rotation={(Mathf.Approximately(rotationDegrees, 0f) ? "none" : rotationDegrees + "deg")}");
-
             if (!Mathf.Approximately(rotationDegrees, 0f))
             {
                 Texture2D unrotated = copiedTexture;

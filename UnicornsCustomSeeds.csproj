@@ -46,6 +46,8 @@
 		<Compile Include="Managers\CustomPseudoManager.cs" />
 		<Compile Include="Managers\CustomShroomsManager.cs" />
 		<Compile Include="Managers\DeferredPlantsManager.cs" />
+		<Compile Include="Managers\DeferredSeedRebuildManager.cs" />
+		<Compile Include="Managers\JoinSyncManager.cs" />
 		<Compile Include="Managers\NetworkSyncManager.cs" />
 		<Compile Include="Managers\PhilStashManager.cs" />
 		<Compile Include="Managers\PseudoQuestManager.cs" />
@@ -53,6 +55,9 @@
 		<Compile Include="Managers\ShirleyStashManager.cs" />
 		<Compile Include="Managers\ShroomQuestManager.cs" />
 		<Compile Include="Patches\CauldronPatches.cs" />
+		<Compile Include="Patches\ItemLoadDiagnostics.cs" />
+		<Compile Include="Patches\JoinSyncPatches.cs" />
+		<Compile Include="Patches\ItemStreamGuard.cs" />
 		<Compile Include="Patches\NetworkingPatches.cs" />
 		<Compile Include="Patches\ProductManagerAppPatches.cs" />
 		<Compile Include="Managers\SeedQuestManager.cs" />

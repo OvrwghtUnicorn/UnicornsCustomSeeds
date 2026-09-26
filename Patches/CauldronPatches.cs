@@ -14,7 +14,11 @@ using Il2CppScheduleOne;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.ObjectScripts;
+// UnityEvent.AddListener takes a System.Action through Il2CppInterop, but a
+// UnityAction on the MONO target. Aliased so the lambda below stays single-sourced.
+using CookEndListener = System.Action;
 #elif MONO
+using CookEndListener = UnityEngine.Events.UnityAction;
 using FishNet;
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
@@ -72,7 +76,7 @@ namespace UnicornsCustomSeeds.Patches
             {
     // ── A) onCookEnd cleanup listener ─────────────────────────────────
   var cauldron = __instance;
-    cauldron.onCookEnd.AddListener(new Action(() =>
+    cauldron.onCookEnd.AddListener(new CookEndListener(() =>
     {
           try
      {

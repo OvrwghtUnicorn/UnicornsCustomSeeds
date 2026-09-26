@@ -306,7 +306,6 @@ namespace UnicornsCustomSeeds.Seeds
 
             try
             {
-                Utility.Log($"[PSEUDO] Main Color: {appearance.MainColor}, Secondary Color: {appearance.SecondaryColor}");
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
                     SeedVisualsManager.basePseudoSprite, top, bottom, SeedVisualsManager.FillKeyColor);

@@ -28,6 +28,7 @@ using Il2CppScheduleOne.UI.Phone.Delivery;
 using FishNet;
 using ScheduleOne;
 using ScheduleOne.DevUtilities;
+using ScheduleOne.Economy;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.Messaging;
 using ScheduleOne.Misc;

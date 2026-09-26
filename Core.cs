@@ -177,6 +177,7 @@ namespace UnicornsCustomSeeds
                 UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
                 StashManager.ClearCaches();
+                JoinSyncManager.ClearAll();
                 ModInitialized = false;
             }
             else

@@ -99,6 +99,11 @@ namespace UnicornsCustomSeeds.Patches
 
             // Coca / shroom / pseudo ride their own Create*_Server channels.
             NetworkSyncManager.BroadcastAllDiscovered();
+
+            // Every custom definition for this connection has now been written. Containers
+            // that relied on the vanilla onProductDataSentToConnection hook flushed one
+            // step ago — before the payloads above — so release the ones we parked.
+            JoinSyncManager.OnCustomDataSent(connection);
         }
     }
 
@@ -166,7 +171,13 @@ namespace UnicornsCustomSeeds.Patches
             WeedAppearanceSettings appearance)
         {
             if (id != "ogkushseed")
+            {
+                // A real weed mix just finished replicating. Any custom seed payload that
+                // landed before its mix existed can now be built — see
+                // DeferredSeedRebuildManager. Postfix, so the mix is already registered.
+                DeferredSeedRebuildManager.TryRebuild(id);
                 return;
+            }
 
             if (name == null)
                 return;
@@ -265,44 +276,17 @@ namespace UnicornsCustomSeeds.Patches
             try
             {
                 UnicornSeedData seedData = JsonConvert.DeserializeObject<UnicornSeedData>(serializedString);
-                if (Registry.ItemExists(seedData.seedId))
-                {
-                    return;
-                }
 
-                if (!CustomSeedsManager.DiscoveredSeeds.ContainsKey(seedData.mixId))
-                {
-                    CustomSeedsManager.DiscoveredSeeds.Add(seedData.mixId, seedData);
-                }
+                // One line per payload: how many of the host's seeds actually arrived, and
+                // which of them lost the race against their own base mix.
+                bool mixReady = Registry.GetItem<WeedDefinition>(seedData.mixId) != null;
+                bool built = CustomSeedsManager.RebuildFromPayload(seedData);
 
-                SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(seedData);
-                if (newSeed != null)
-                {
-                    try
-                    {
-                        // Use the price the server already computed and serialized.
-                        // Recomputing it here via GetIngredientCost() is wrong on a
-                        // joining client: the mix's Recipes have not synced yet, so
-                        // DeepSearchRecursive treats the mix itself as a base strain and
-                        // the "<mixId>seed" Registry lookup returns null. Matches how the
-                        // coca/shroom/pseudo rebuilds consume data.price.
-                        float price = seedData.price;
-                        Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
-                        CustomSeedsManager.CreateShopListing(newSeed, price);
-                        CustomSeedsManager.AddSeedToPots(newSeed);
-                        CustomSeedsManager.EnableSeedIndicator(seedData.mixId);
-                    }
-                    catch (Exception ex)
-                    {
-                        Utility.PrintException(ex);
-                    }
-                }
+                Utility.Log($"[NET-JSON] seed='{seedData.seedId}' mix='{seedData.mixId}' " +
+                            $"mixReady={mixReady} built={built}");
 
-                if (newSeed != null && InstanceFinder.IsClient)
-                {
-                    DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
-                }
-
+                if (!built)
+                    DeferredSeedRebuildManager.Park(seedData);
             }
             catch (Exception ex)
             {

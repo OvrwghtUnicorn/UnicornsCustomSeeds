@@ -474,10 +474,53 @@ namespace UnicornsCustomSeeds.Managers
             }
             else
             {
-                MelonLogger.Error("Could not parse weed and seed defitions");
+                Utility.Error($"SeedDefinitionLoader: WeedDefinition '{newSeedData.mixId}' is not in the " +
+                              $"Registry yet — seed '{newSeedData.seedId}' cannot be built.");
             }
 
             return newSeed;
+        }
+
+        /// <summary>
+        /// Client-side rebuild of one custom seed from a [NET-JSON] payload.
+        ///
+        /// Returns false when the base mix has not replicated yet; the caller should park
+        /// the payload (see DeferredSeedRebuildManager) rather than drop it, because the
+        /// host sends these immediately while the mixes arrive on the queued vanilla
+        /// replication and can land afterwards.
+        /// </summary>
+        public static bool RebuildFromPayload(UnicornSeedData seedData)
+        {
+            if (seedData == null) return true;
+            if (Registry.ItemExists(seedData.seedId)) return true;   // already built
+
+            if (!DiscoveredSeeds.ContainsKey(seedData.mixId))
+                DiscoveredSeeds.Add(seedData.mixId, seedData);
+
+            if (Registry.GetItem<WeedDefinition>(seedData.mixId) == null)
+                return false;                                        // mix not here yet
+
+            SeedDefinition newSeed = SeedDefinitionLoader(seedData);
+            if (newSeed == null) return false;
+
+            try
+            {
+                // Use the price the server already computed and serialized. Recomputing it
+                // here is wrong on a joining client: the mix's Recipes have not synced yet.
+                Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+                CreateShopListing(newSeed, seedData.price);
+                AddSeedToPots(newSeed);
+                EnableSeedIndicator(seedData.mixId);
+            }
+            catch (Exception ex)
+            {
+                Utility.PrintException(ex);
+            }
+
+            if (InstanceFinder.IsClient)
+                DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
+
+            return true;
         }
     }
 }
