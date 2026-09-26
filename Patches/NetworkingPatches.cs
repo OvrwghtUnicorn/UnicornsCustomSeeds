@@ -99,11 +99,6 @@ namespace UnicornsCustomSeeds.Patches
 
             // Coca / shroom / pseudo ride their own Create*_Server channels.
             NetworkSyncManager.BroadcastAllDiscovered();
-
-            // Every custom definition for this connection has now been written. Containers
-            // that relied on the vanilla onProductDataSentToConnection hook flushed one
-            // step ago — before the payloads above — so release the ones we parked.
-            JoinSyncManager.OnCustomDataSent(connection);
         }
     }
 

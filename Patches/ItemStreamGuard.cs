@@ -33,7 +33,8 @@ namespace UnicornsCustomSeeds.Patches
     // unknown item, instead of hanging.
     //
     // It is a safety net, not the fix. An item reaching a client that lacks its
-    // definition is still a bug upstream — see JoinSyncManager for the ordering side.
+    // definition is still a bug upstream: the host writes item slots for containers whose
+    // definitions have not replicated yet. That ordering problem is unsolved.
     //
     // Patched on ItemSerializers.ReadItemInstance, not CreateInstanceAndRead: the probe
     // run showed CreateInstanceAndRead gets inlined away on IL2CPP, while the

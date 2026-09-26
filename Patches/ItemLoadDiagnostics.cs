@@ -6,63 +6,32 @@ using UnicornsCustomSeeds.TemplateUtils;
 using Il2CppFishNet.Serializing;
 using Il2CppFishNet.Transporting;
 using Il2CppScheduleOne;
-using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Storage;
 #elif MONO
 using FishNet.Serializing;
 using FishNet.Transporting;
 using ScheduleOne;
-using ScheduleOne.ItemFramework;
 using ScheduleOne.Storage;
 #endif
 
 namespace UnicornsCustomSeeds.Patches
 {
     // ─────────────────────────────────────────────────────────────────────────
-    // TEMPORARY PROBES — client side, observation only.
+    // DIAGNOSTIC PROBE — client side, observation only.
     //
-    // Question: on a joining client, can we extract an incoming item's ID, its
-    // quantity, and the ItemSlot it was destined for?
+    // Reports which incoming item IDs a joining client has no definition for.
+    // This is the only view into that, and it found the 'deathfuel' payload the
+    // host never sent.
     //
-    // Nothing here changes behaviour. Every prefix returns true, and the probe
-    // that reads from the stream rewinds it so the original sees an untouched
-    // reader.
+    // Nothing here changes behaviour. The prefix returns true, and it rewinds the
+    // reader so the original sees an untouched stream. Reading from a Reader
+    // ADVANCES it, so that rewind is load-bearing, not tidiness.
     //
-    // Reading from a Reader ADVANCES it. A prefix that reads and then returns
-    // true makes the original re-read from the wrong offset and corrupt every
-    // field after it, so the rewind is load-bearing, not tidiness.
+    // Two earlier probes lived here and have been removed, having answered their
+    // question: a prefix on ItemSerializers.ReadItemInstance fires, while one on
+    // ItemInstance.CreateInstanceAndRead never does because IL2CPP inlines it into
+    // its only caller. ItemStreamGuard depends on that result for its patch target.
     // ─────────────────────────────────────────────────────────────────────────
-
-    /// <summary>Confirms a patch here is live. Reads nothing, so it cannot disturb the stream.</summary>
-    [HarmonyPatch(typeof(ItemSerializers), nameof(ItemSerializers.ReadItemInstance))]
-    public static class Probe_ReadItemInstance
-    {
-        public static int Calls;
-
-        public static bool Prefix(Reader reader)
-        {
-            if (Calls++ == 0)
-                Utility.Log("[PROBE] ItemSerializers.ReadItemInstance prefix FIRED — patchable.");
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Tests whether CreateInstanceAndRead survives IL2CPP inlining. If ReadItemInstance
-    /// logs and this never does, it was inlined into its only caller. Reads nothing.
-    /// </summary>
-    [HarmonyPatch(typeof(ItemInstance), nameof(ItemInstance.CreateInstanceAndRead))]
-    public static class Probe_CreateInstanceAndRead
-    {
-        public static int Calls;
-
-        public static bool Prefix(Reader reader)
-        {
-            if (Calls++ == 0)
-                Utility.Log("[PROBE] ItemInstance.CreateInstanceAndRead prefix FIRED — NOT inlined.");
-            return true;
-        }
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Verified wire order (StorageEntity.cs:666 Observers, :710 Target):
