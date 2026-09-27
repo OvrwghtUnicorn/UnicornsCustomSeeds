@@ -54,18 +54,10 @@ namespace UnicornsCustomSeeds.Managers
     {
         public const string PAYLOAD_PREFIX = "[NET-JSON]";
 
-        /// <summary>
-        /// Kill switch (MelonPreferences: SyncNonWeedDrugs). When false, nothing is sent
-        /// and received payloads are ignored — weed sync is untouched either way.
-        /// Defaults to true if config has not initialized yet.
-        /// </summary>
-        public static bool Enabled =>
-            StashManager.SyncNonWeedDrugs == null || StashManager.SyncNonWeedDrugs.Value;
-
         // Vanilla IDs guaranteed to exist in the Registry — see class remarks.
-        public const string SENTINEL_COCA   = CustomCocaSeedsManager.BASE_SEED_ID;      // "cocaseed"
+        public const string SENTINEL_COCA = CustomCocaSeedsManager.BASE_SEED_ID;      // "cocaseed"
         public const string SENTINEL_SHROOM = CustomShroomsManager.BASE_SYRINGE_ID;     // "sporesyringe"
-        public const string SENTINEL_METH   = CustomPseudoManager.BASE_LIQUIDMETH_ID;   // "liquidmeth"
+        public const string SENTINEL_METH = CustomPseudoManager.BASE_LIQUIDMETH_ID;   // "liquidmeth"
 
         // ─────────────────────────────────────────────────────────────────────
         // Send
@@ -77,7 +69,7 @@ namespace UnicornsCustomSeeds.Managers
         /// </summary>
         public static void Broadcast(UnicornSeedData data)
         {
-            if (data == null || !InstanceFinder.IsServer || !Enabled) return;
+            if (data == null || !InstanceFinder.IsServer) return;
 
             try
             {
@@ -137,7 +129,6 @@ namespace UnicornsCustomSeeds.Managers
         public static void BroadcastQuestConfig(EDrugType drugType)
         {
             if (!InstanceFinder.IsServer) return;
-            if (drugType != EDrugType.Marijuana && !Enabled) return;
 
             ProductManager pm = NetworkSingleton<ProductManager>.Instance;
             if (pm == null)
@@ -289,11 +280,11 @@ namespace UnicornsCustomSeeds.Managers
         /// </summary>
         public static void BroadcastAllDiscovered()
         {
-            if (!InstanceFinder.IsServer || !Enabled) return;
+            if (!InstanceFinder.IsServer) return;
 
             foreach (var kvp in CustomCocaSeedsManager.DiscoveredCocaSeeds) Broadcast(kvp.Value);
-            foreach (var kvp in CustomShroomsManager.DiscoveredShrooms)     Broadcast(kvp.Value);
-            foreach (var kvp in CustomPseudoManager.DiscoveredPseudoSeeds)  Broadcast(kvp.Value);
+            foreach (var kvp in CustomShroomsManager.DiscoveredShrooms) Broadcast(kvp.Value);
+            foreach (var kvp in CustomPseudoManager.DiscoveredPseudoSeeds) Broadcast(kvp.Value);
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -307,7 +298,6 @@ namespace UnicornsCustomSeeds.Managers
         public static bool TryParsePayload(string name, string id, string sentinel, out UnicornSeedData data)
         {
             data = null;
-            if (!Enabled) return false;
             if (id != sentinel) return false;
             if (string.IsNullOrEmpty(name) || !name.StartsWith(PAYLOAD_PREFIX)) return false;
 
@@ -335,8 +325,8 @@ namespace UnicornsCustomSeeds.Managers
             {
                 switch (data.drugType)
                 {
-                    case EDrugType.Cocaine:        RebuildCoca(data);   break;
-                    case EDrugType.Shrooms:        RebuildShroom(data); break;
+                    case EDrugType.Cocaine: RebuildCoca(data); break;
+                    case EDrugType.Shrooms: RebuildShroom(data); break;
                     case EDrugType.Methamphetamine: RebuildPseudo(data); break;
                     default:
                         Utility.Error($"NetworkSyncManager: unsupported drugType '{data.drugType}' for '{data.mixId}'.");

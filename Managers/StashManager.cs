@@ -41,7 +41,6 @@ namespace UnicornsCustomSeeds.Managers
         public static MelonPreferences_Entry<int> StashCostEntry;
         public static MelonPreferences_Entry<int> StashQtyEntry;
         public static MelonPreferences_Entry<int> SynthesizeTime;
-        public static MelonPreferences_Entry<bool> SyncNonWeedDrugs;
 
         public static void InitializeConfig()
         {
@@ -49,7 +48,6 @@ namespace UnicornsCustomSeeds.Managers
             StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement", "The price that Albert charges to synthesize seeds");
             StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement", "The quantity of weed that needs to be provided of a certain mix");
             SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in secondsd that it will take for Albert to synthesize a seed");
-            SyncNonWeedDrugs = ConfigCategory.CreateEntry("SyncNonWeedDrugs", true, "Sync Coca/Shroom/Pseudo In Multiplayer", "Kill switch for the coca/shroom/pseudo multiplayer sync. Set false to disable it entirely (weed sync is unaffected) when diagnosing client-side crashes.");
         }
 
         public static SupplierStash GetSupplierStash()
