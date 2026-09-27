@@ -238,13 +238,20 @@ namespace UnicornsCustomSeeds.Managers
 
         private const int MaxAttempts = 10;
 
+        /// <param name="clearOperation">
+        /// False on the host. Clearing CurrentCookOperation there makes
+        /// ChemistryStation.OnSpawnServer skip its send, so a joining client gets no cook at
+        /// all. On a client there is nothing to replicate outward, so clearing is what keeps
+        /// the half-applied operation from throwing again every minute pass.
+        /// </param>
         public static void HandleChemistryFailure(ChemistryStation station,
                                                  ChemistryCookOperation operation,
-                                                 Exception error)
+                                                 Exception error,
+                                                 bool clearOperation)
         {
             try
             {
-                if (station != null) station.CurrentCookOperation = null;
+                if (station != null && clearOperation) station.CurrentCookOperation = null;
 
                 int attempts = AttemptsForChemistry(station);
                 if (station == null || operation == null || attempts >= MaxAttempts)
@@ -252,7 +259,8 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Error($"[COOKWAIT] chemistry cook '{operation?.RecipeID}' failed " +
                                   $"{attempts} time(s) and is being dropped; the station will " +
                                   "show no cook in progress.");
-                    Utility.PrintException(error);
+                    Utility.PrintException(error, "DeferredCookOpsManager.HandleChemistryFailure",
+                                           handled: false);
                     RemoveChemistry(station);
                     return;
                 }
@@ -263,7 +271,8 @@ namespace UnicornsCustomSeeds.Managers
                 // Print the exception on the first failure only. Without it there is no way
                 // to see WHICH member was null, and printing it on all ten retries would
                 // bury everything else.
-                if (attempts == 0) Utility.PrintException(error);
+                if (attempts == 0)
+                    Utility.PrintException(error, "Patch_ChemistryStation_SetCookOperation.Finalizer");
                 ParkChemistry(station, operation);
                 BumpChemistry(station);
             }
@@ -273,12 +282,14 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
+        /// <param name="clearOperation">See the remarks on HandleChemistryFailure.</param>
         public static void HandleOvenFailure(LabOven oven, OvenCookOperation operation,
-                                             bool playButtonPress, Exception error)
+                                             bool playButtonPress, Exception error,
+                                             bool clearOperation)
         {
             try
             {
-                if (oven != null) oven.CurrentOperation = null;
+                if (oven != null && clearOperation) oven.CurrentOperation = null;
 
                 int attempts = AttemptsForOven(oven);
                 if (oven == null || operation == null || attempts >= MaxAttempts)
@@ -286,7 +297,8 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Error($"[COOKWAIT] oven cook '{operation?.IngredientID}' failed " +
                                   $"{attempts} time(s) and is being dropped; the oven will " +
                                   "show no cook in progress.");
-                    Utility.PrintException(error);
+                    Utility.PrintException(error, "DeferredCookOpsManager.HandleOvenFailure",
+                                           handled: false);
                     RemoveOven(oven);
                     return;
                 }
@@ -297,7 +309,8 @@ namespace UnicornsCustomSeeds.Managers
                 // Print the exception on the first failure only. Without it there is no way
                 // to see WHICH member was null, and printing it on all ten retries would
                 // bury everything else.
-                if (attempts == 0) Utility.PrintException(error);
+                if (attempts == 0)
+                    Utility.PrintException(error, "Patch_LabOven_SetCookOperation.Finalizer");
                 ParkOven(oven, operation, playButtonPress);
                 BumpOven(oven);
             }

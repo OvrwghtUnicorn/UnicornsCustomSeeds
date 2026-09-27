@@ -135,6 +135,12 @@ namespace UnicornsCustomSeeds
                 CustomSeedsManager.letsMigrate = false;
             }
 
+            // Custom recipes are injected into ChemistryStationInterface during the
+            // Initialize calls above. The host's save loader set up its cook operations long
+            // before that and any that threw are parked, so drain them now. Harmless on a
+            // client, where the receive paths already drive this.
+            DeferredCookOpsManager.TryReplayAll();
+
             MelonCoroutines.Start(StashManager.WaitForAllStashesAndSubscribe());
         }
 
