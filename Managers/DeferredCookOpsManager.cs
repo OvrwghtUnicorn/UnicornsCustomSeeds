@@ -52,6 +52,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             public ChemistryStation Station;
             public ChemistryCookOperation Operation;
+            public int Attempts;
         }
 
         private sealed class PendingOvenOp
@@ -59,6 +60,7 @@ namespace UnicornsCustomSeeds.Managers
             public LabOven Oven;
             public OvenCookOperation Operation;
             public bool PlayButtonPress;
+            public int Attempts;
         }
 
         private static readonly List<PendingChemistryOp> pendingChemistry = new List<PendingChemistryOp>();
@@ -221,6 +223,126 @@ namespace UnicornsCustomSeeds.Managers
             {
                 IsReplaying = false;
             }
+        }
+
+        // ── Failure handling ─────────────────────────────────────────────────
+        //
+        // Called from the Harmony finalizers when the vanilla handler threw despite the
+        // readiness check passing. ChemistryStation's handler also touches BoilingFlask,
+        // Burner and Alarm and dereferences Recipe a second time inside UpdateClock, so
+        // predicting every null is not realistic — catching is.
+        //
+        // The operation is cleared before parking: consumers all guard on null, whereas a
+        // half-applied operation is non-null with a null member and throws again every
+        // minute pass.
+
+        private const int MaxAttempts = 10;
+
+        public static void HandleChemistryFailure(ChemistryStation station,
+                                                 ChemistryCookOperation operation,
+                                                 Exception error)
+        {
+            try
+            {
+                if (station != null) station.CurrentCookOperation = null;
+
+                int attempts = AttemptsForChemistry(station);
+                if (station == null || operation == null || attempts >= MaxAttempts)
+                {
+                    Utility.Error($"[COOKWAIT] chemistry cook '{operation?.RecipeID}' failed " +
+                                  $"{attempts} time(s) and is being dropped; the station will " +
+                                  "show no cook in progress.");
+                    Utility.PrintException(error);
+                    RemoveChemistry(station);
+                    return;
+                }
+
+                Utility.Log($"[COOKWAIT] chemistry cook '{operation.RecipeID}' on " +
+                            $"'{station.name}' threw on attempt {attempts + 1} — parked to retry.");
+
+                // Print the exception on the first failure only. Without it there is no way
+                // to see WHICH member was null, and printing it on all ten retries would
+                // bury everything else.
+                if (attempts == 0) Utility.PrintException(error);
+                ParkChemistry(station, operation);
+                BumpChemistry(station);
+            }
+            catch (Exception e)
+            {
+                Utility.PrintException(e);
+            }
+        }
+
+        public static void HandleOvenFailure(LabOven oven, OvenCookOperation operation,
+                                             bool playButtonPress, Exception error)
+        {
+            try
+            {
+                if (oven != null) oven.CurrentOperation = null;
+
+                int attempts = AttemptsForOven(oven);
+                if (oven == null || operation == null || attempts >= MaxAttempts)
+                {
+                    Utility.Error($"[COOKWAIT] oven cook '{operation?.IngredientID}' failed " +
+                                  $"{attempts} time(s) and is being dropped; the oven will " +
+                                  "show no cook in progress.");
+                    Utility.PrintException(error);
+                    RemoveOven(oven);
+                    return;
+                }
+
+                Utility.Log($"[COOKWAIT] oven cook '{operation.IngredientID}' on " +
+                            $"'{oven.name}' threw on attempt {attempts + 1} — parked to retry.");
+
+                // Print the exception on the first failure only. Without it there is no way
+                // to see WHICH member was null, and printing it on all ten retries would
+                // bury everything else.
+                if (attempts == 0) Utility.PrintException(error);
+                ParkOven(oven, operation, playButtonPress);
+                BumpOven(oven);
+            }
+            catch (Exception e)
+            {
+                Utility.PrintException(e);
+            }
+        }
+
+        private static int AttemptsForChemistry(ChemistryStation station)
+        {
+            foreach (var e in pendingChemistry)
+                if (e.Station == station) return e.Attempts;
+            return 0;
+        }
+
+        private static int AttemptsForOven(LabOven oven)
+        {
+            foreach (var e in pendingOven)
+                if (e.Oven == oven) return e.Attempts;
+            return 0;
+        }
+
+        private static void BumpChemistry(ChemistryStation station)
+        {
+            foreach (var e in pendingChemistry)
+                if (e.Station == station) { e.Attempts++; return; }
+        }
+
+        private static void BumpOven(LabOven oven)
+        {
+            foreach (var e in pendingOven)
+                if (e.Oven == oven) { e.Attempts++; return; }
+        }
+
+        private static void RemoveChemistry(ChemistryStation station)
+        {
+            for (int i = pendingChemistry.Count - 1; i >= 0; i--)
+                if (pendingChemistry[i].Station == station) pendingChemistry.RemoveAt(i);
+        }
+
+        private static void RemoveOven(LabOven oven)
+        {
+            for (int i = pendingOven.Count - 1; i >= 0; i--)
+                if (pendingOven[i].Oven == oven) pendingOven.RemoveAt(i);
         }
 
         public static void ClearAll()
