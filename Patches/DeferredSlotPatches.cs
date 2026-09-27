@@ -8,7 +8,9 @@ using Il2CppFishNet;
 using Il2CppFishNet.Serializing;
 using Il2CppFishNet.Transporting;
 using Il2CppScheduleOne.ItemFramework;
+using Il2CppScheduleOne.NPCs;
 using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.StationFramework;
 using Il2CppScheduleOne.Storage;
 using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
@@ -16,7 +18,9 @@ using FishNet;
 using FishNet.Serializing;
 using FishNet.Transporting;
 using ScheduleOne.ItemFramework;
+using ScheduleOne.NPCs;
 using ScheduleOne.ObjectScripts;
+using ScheduleOne.StationFramework;
 using ScheduleOne.Storage;
 using GenericCol = System.Collections.Generic;
 #endif
@@ -146,6 +150,47 @@ namespace UnicornsCustomSeeds.Patches
     {
         public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
         public static void Postfix(Cauldron __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Three more IItemSlotOwner types that can plausibly hold a custom drug item.
+    //
+    // Added after a join log showed two [ITEMGUARD] fires with no matching park —
+    // 'kryptonitesucks_customliquidmeth' and 'bananafruit_customcocainebase' reached a
+    // container not yet covered. Twelve types share this same generated reader; these are
+    // the ones that can actually hold these items. A chemist carries ingredients between
+    // stations (NPCInventory), and the drying rack and mushroom spawn station both take
+    // custom inputs.
+    //
+    // Deliberately NOT covered: BrickPress, PackagingStation and PlayerClothing, which never
+    // hold these intermediates.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HarmonyPatch(typeof(NPCInventory),
+        nameof(NPCInventory.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_NPCInventory_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(NPCInventory __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(DryingRack),
+        nameof(DryingRack.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_DryingRack_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(DryingRack __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(MushroomSpawnStation),
+        nameof(MushroomSpawnStation.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_MushroomSpawnStation_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(MushroomSpawnStation __instance) =>
             SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
     }
 }
