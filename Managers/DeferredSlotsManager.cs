@@ -5,39 +5,49 @@ using UnicornsCustomSeeds.TemplateUtils;
 #if IL2CPP
 using Il2CppScheduleOne;
 using Il2CppScheduleOne.ItemFramework;
-using Il2CppScheduleOne.ObjectScripts;
+using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
 using ScheduleOne;
 using ScheduleOne.ItemFramework;
-using ScheduleOne.ObjectScripts;
+using GenericCol = System.Collections.Generic;
 #endif
 
 namespace UnicornsCustomSeeds.Managers
 {
     /// <summary>
-    /// Client-side retry for station slots whose item definition had not replicated yet.
+    /// Client-side retry for container slots whose item definition had not replicated yet.
     ///
-    /// ChemistryStation.OnSpawnServer calls SendItemSlotDataToClient inline, gated only on
-    /// the vanilla ProductManager.onProductDataSentToConnection event. That event fires at
-    /// the END of ProductManager.OnSpawnServer, which is BEFORE this mod's Harmony postfix
-    /// sends the payloads that define the custom items. Measured on a real join, the slot
-    /// data arrives roughly 3 seconds ahead of the definitions — the client also spends
-    /// seconds rebuilding them — so it is not a race we can win by being faster.
+    /// ChemistryStation, LabOven and MixingStation call SendItemSlotDataToClient inline from
+    /// OnSpawnServer, gated only on the vanilla ProductManager.onProductDataSentToConnection
+    /// event. That event fires at the END of ProductManager.OnSpawnServer, which is BEFORE
+    /// this mod's Harmony postfix sends the payloads defining the custom items. Measured on
+    /// a real join, slot data lands ~3 seconds ahead of the definitions — the client also
+    /// spends seconds rebuilding them — so it is not a race that can be won by being faster.
     ///
-    /// ItemStreamGuard keeps that early read from throwing, but the slot ends up empty.
-    /// This puts the item back once its definition exists. Host state was never wrong:
+    /// StorageEntity is included for completeness. It enqueues its send through
+    /// ReplicationQueue, which should already order it after the definitions, but it costs
+    /// nothing to cover and the [SLOTWAIT] log will say if that assumption is ever wrong.
+    ///
+    /// ItemStreamGuard keeps the early read from throwing, but the slot ends up empty. This
+    /// puts the contents back once the definition is registered. Host state was never wrong:
     /// confirmed by save/reload, where the host still shows the item and only the client
     /// does not.
     ///
     /// Same shape as DeferredPlantsManager and DeferredSeedRebuildManager, one layer over:
-    /// that one defers a plant until its seed exists, and the other a seed until its mix
-    /// exists. This defers a slot's contents until its item exists.
+    /// one defers a plant until its seed exists, another a seed until its mix exists. This
+    /// defers a slot's contents until its item exists.
+    ///
+    /// Holds the container's ItemSlots list directly rather than the container or an
+    /// IItemSlotOwner reference. Four unrelated types own these slots and they share only
+    /// that interface, so keeping the list avoids relying on Il2CppInterop's interface
+    /// casting for something this simple.
     /// </summary>
     public static class DeferredSlotsManager
     {
         private sealed class PendingSlot
         {
-            public ChemistryStation Station;
+            public string ContainerName;
+            public GenericCol.List<ItemSlot> Slots;
             public int SlotIndex;
             public string ItemId;
             public int Quantity;
@@ -49,18 +59,20 @@ namespace UnicornsCustomSeeds.Managers
         public static int PendingCount => pending.Count;
 
         /// <summary>Hold a slot's contents until its item definition shows up.</summary>
-        public static void Park(ChemistryStation station, int slotIndex, string itemId,
-                               int quantity, ItemInstance standIn)
+        public static void Park(string containerName, GenericCol.List<ItemSlot> slots,
+                                int slotIndex, string itemId, int quantity, ItemInstance standIn)
         {
-            if (station == null || string.IsNullOrEmpty(itemId)) return;
+            if (slots == null || string.IsNullOrEmpty(itemId)) return;
+            if (slotIndex < 0 || slotIndex >= slots.Count) return;
 
             foreach (var existing in pending)
-                if (existing.Station == station && existing.SlotIndex == slotIndex)
+                if (ReferenceEquals(existing.Slots, slots) && existing.SlotIndex == slotIndex)
                     return;
 
             pending.Add(new PendingSlot
             {
-                Station = station,
+                ContainerName = containerName ?? "<unnamed>",
+                Slots = slots,
                 SlotIndex = slotIndex,
                 ItemId = itemId,
                 Quantity = quantity,
@@ -68,12 +80,12 @@ namespace UnicornsCustomSeeds.Managers
             });
 
             Utility.Log($"[SLOTWAIT] parked '{itemId}' x{quantity} for " +
-                        $"'{station.name}' slot {slotIndex} ({pending.Count} pending).");
+                        $"'{containerName}' slot {slotIndex} ({pending.Count} pending).");
         }
 
         /// <summary>
         /// Called after any custom definition is rebuilt. Cheap to call repeatedly — the
-        /// pending list holds at most a handful of entries, and each one just checks the
+        /// pending list holds at most a handful of entries and each one just checks the
         /// Registry.
         /// </summary>
         public static void TryReplayAll()
@@ -84,7 +96,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 var entry = pending[i];
 
-                if (entry.Station == null)
+                if (entry.Slots == null)
                 {
                     pending.RemoveAt(i);
                     continue;
@@ -109,9 +121,9 @@ namespace UnicornsCustomSeeds.Managers
 
                 real.SetQuantity(entry.Quantity > 0 ? entry.Quantity : 1);
 
-                // The stand-in was the same subclass as the real item, so it read the
-                // real quality off the wire. Carry it over or a high-quality pseudo comes
-                // back as Standard.
+                // The stand-in was the same subclass as the real item, so it read the real
+                // quality off the wire. Carry it over or a high-quality pseudo comes back
+                // as Standard.
                 if (entry.StandIn != null)
                 {
 #if IL2CPP
@@ -125,18 +137,19 @@ namespace UnicornsCustomSeeds.Managers
                         realQ.Quality = standQ.Quality;
                 }
 
-                if (entry.Station.ItemSlots == null ||
-                    entry.SlotIndex < 0 || entry.SlotIndex >= entry.Station.ItemSlots.Count)
+                if (entry.SlotIndex < 0 || entry.SlotIndex >= entry.Slots.Count)
                 {
                     Utility.Error($"[SLOTWAIT] slot {entry.SlotIndex} out of range on " +
-                                  $"'{entry.Station.name}' — '{entry.ItemId}' dropped.");
+                                  $"'{entry.ContainerName}' — '{entry.ItemId}' dropped.");
                     return;
                 }
 
-                entry.Station.ItemSlots[entry.SlotIndex].SetStoredItem(real, true);
+                // _internal: true so this stays a local correction. The client must not
+                // echo it back to the host, whose copy was right all along.
+                entry.Slots[entry.SlotIndex].SetStoredItem(real, true);
 
                 Utility.Log($"[SLOTWAIT] restored '{entry.ItemId}' x{entry.Quantity} to " +
-                            $"'{entry.Station.name}' slot {entry.SlotIndex} " +
+                            $"'{entry.ContainerName}' slot {entry.SlotIndex} " +
                             $"({pending.Count} still pending).");
             }
             catch (Exception e)

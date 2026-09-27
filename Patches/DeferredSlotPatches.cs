@@ -7,54 +7,62 @@ using UnicornsCustomSeeds.TemplateUtils;
 using Il2CppFishNet;
 using Il2CppFishNet.Serializing;
 using Il2CppFishNet.Transporting;
+using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.ObjectScripts;
+using Il2CppScheduleOne.Storage;
+using GenericCol = Il2CppSystem.Collections.Generic;
 #elif MONO
 using FishNet;
 using FishNet.Serializing;
 using FishNet.Transporting;
+using ScheduleOne.ItemFramework;
 using ScheduleOne.ObjectScripts;
+using ScheduleOne.Storage;
+using GenericCol = System.Collections.Generic;
 #endif
 
 namespace UnicornsCustomSeeds.Patches
 {
     // ─────────────────────────────────────────────────────────────────────────
-    // Recovers chemistry station slots that arrived before their item definition.
+    // Recovers container slots that arrived before their item definition.
     //
-    // Verified wire order (ChemistryStation.cs:1254):
+    // Verified wire order, identical in all four containers (e.g. ChemistryStation.cs:1254):
     //
     //     int itemSlotIndex = PooledReader0.ReadInt32(AutoPackType.Packed);
     //     ItemInstance instance = PooledReader0.ReadItemInstance();
     //
-    // The Target variant is the join-sync path — SendItemSlotDataToClient passes a non-null
-    // connection, which routes to RpcWriter___Target_*. The Observers variant is ordinary
-    // gameplay and is left alone.
+    // All four share the generated suffix _2652194801, so one helper covers them.
+    //
+    // Only the Target variant is patched. That is the join-sync path:
+    // SendItemSlotDataToClient passes a non-null connection, which routes to
+    // RpcWriter___Target_*. The Observers variant is ordinary gameplay, where the client
+    // already has every definition, and is left alone.
     //
     // Split across prefix and postfix because the destination and the item are known in
-    // different places. The prefix can read the slot index off the wire but the item has
-    // not been deserialized yet; ItemStreamGuard runs nested inside the original and knows
-    // the item but not where it was going. So: prefix records the slot, postfix checks
-    // whether the guard skipped anything and pairs the two up.
+    // different places. The prefix can read the slot index off the wire but the item has not
+    // been deserialized yet; ItemStreamGuard runs nested inside the original and knows the
+    // item but not where it was going. So: prefix records the slot, postfix checks whether
+    // the guard skipped anything and pairs the two up.
     //
-    // Reading from a Reader ADVANCES it, so the prefix rewinds. That rewind is
-    // load-bearing — without it the original reads from the wrong offset.
+    // Reading from a Reader ADVANCES it, so the prefix rewinds. That rewind is load-bearing
+    // — without it the original reads from the wrong offset and corrupts every field after.
     // ─────────────────────────────────────────────────────────────────────────
-    [HarmonyPatch(typeof(ChemistryStation),
-        nameof(ChemistryStation.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
-    public static class Patch_ChemistryStation_TargetSlotReader
+    internal static class SlotReaderGuard
     {
         private static int pendingSlotIndex = -1;
 
-        public static void Prefix(PooledReader PooledReader0)
+        public static void Before(PooledReader reader)
         {
             pendingSlotIndex = -1;
             ItemStreamGuard.ClearLastSkipped();
 
             if (!InstanceFinder.IsClient || InstanceFinder.IsServer) return;
+            if (reader == null) return;
 
-            int start = PooledReader0.Position;
+            int start = reader.Position;
             try
             {
-                pendingSlotIndex = PooledReader0.ReadInt32(AutoPackType.Packed);
+                pendingSlotIndex = reader.ReadInt32(AutoPackType.Packed);
             }
             catch (Exception)
             {
@@ -62,11 +70,12 @@ namespace UnicornsCustomSeeds.Patches
             }
             finally
             {
-                PooledReader0.Position = start;
+                // Must happen on every path, or the original reads from the wrong offset.
+                reader.Position = start;
             }
         }
 
-        public static void Postfix(ChemistryStation __instance)
+        public static void After(string containerName, GenericCol.List<ItemSlot> slots)
         {
             try
             {
@@ -76,7 +85,8 @@ namespace UnicornsCustomSeeds.Patches
                 if (string.IsNullOrEmpty(skipped)) return;
 
                 DeferredSlotsManager.Park(
-                    __instance,
+                    containerName,
+                    slots,
                     pendingSlotIndex,
                     skipped,
                     ItemStreamGuard.LastSkippedQuantity,
@@ -92,5 +102,50 @@ namespace UnicornsCustomSeeds.Patches
                 ItemStreamGuard.ClearLastSkipped();
             }
         }
+    }
+
+    [HarmonyPatch(typeof(ChemistryStation),
+        nameof(ChemistryStation.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_ChemistryStation_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(ChemistryStation __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(LabOven),
+        nameof(LabOven.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_LabOven_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(LabOven __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(MixingStation),
+        nameof(MixingStation.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_MixingStation_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(MixingStation __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(StorageEntity),
+        nameof(StorageEntity.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_StorageEntity_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(StorageEntity __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
+    }
+
+    [HarmonyPatch(typeof(Cauldron),
+        nameof(Cauldron.RpcReader___Target_SetStoredInstance_Internal_2652194801))]
+    public static class Patch_Cauldron_TargetSlotReader
+    {
+        public static void Prefix(PooledReader PooledReader0) => SlotReaderGuard.Before(PooledReader0);
+        public static void Postfix(Cauldron __instance) =>
+            SlotReaderGuard.After(__instance.name, __instance.ItemSlots);
     }
 }
