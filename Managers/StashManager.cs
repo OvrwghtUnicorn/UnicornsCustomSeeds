@@ -41,6 +41,7 @@ namespace UnicornsCustomSeeds.Managers
         public static MelonPreferences_Entry<int> StashCostEntry;
         public static MelonPreferences_Entry<int> StashQtyEntry;
         public static MelonPreferences_Entry<int> SynthesizeTime;
+        public static MelonPreferences_Entry<bool> DebugLogging;
 
         public static void InitializeConfig()
         {
@@ -48,6 +49,13 @@ namespace UnicornsCustomSeeds.Managers
             StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement", "The price that Albert charges to synthesize seeds");
             StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement", "The quantity of weed that needs to be provided of a certain mix");
             SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in secondsd that it will take for Albert to synthesize a seed");
+            DebugLogging = ConfigCategory.CreateEntry("DebugLogging", false, "Debug Logging",
+                "Verbose mod logging. Off by default. Turn it on only to capture a log for a bug " +
+                "report - it prints recovered errors that look alarming but are handled normally.");
+
+            // Hand it over rather than having Utility look it up, so Utility does not depend
+            // on this class.
+            Utility.DebugEntry = DebugLogging;
         }
 
         public static SupplierStash GetSupplierStash()

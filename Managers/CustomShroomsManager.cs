@@ -110,7 +110,7 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-				/// <summary>
+        /// <summary>
         /// Rebuilds a SporeSyringeDefinition from a saved UnicornSeedData record.
         /// Called by the persistence patch after the game replays CreateShroom on load.
         /// </summary>

@@ -52,11 +52,8 @@ namespace UnicornsCustomSeeds.Patches
             try
             {
                 if (DeferredCookOpsManager.IsReplaying) return true;
-                Utility.Log($"[COOKDIAG] Is not replaying");
                 if (!InstanceFinder.IsClient || InstanceFinder.IsServer) return true;
-                Utility.Log($"[COOKDIAG] It is the server");
                 if (operation == null) return true;
-                Utility.Log($"[COOKDIAG] Operation is not null");
 
                 if (DeferredCookOpsManager.IsChemistryOpReady(operation)) return true;
 

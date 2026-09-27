@@ -99,6 +99,7 @@ namespace UnicornsCustomSeeds.Patches
             {
                 // A failed drain leaves the stream misaligned either way; at least do not
                 // also throw out of the trampoline.
+                Utility.Critical($"Unicorns Custom Seeds: could not safely skip the unknown item '{id}'. If a player is stuck on the loading screen, this is why.");
                 Utility.Error($"[ITEMGUARD] drain failed for '{id}' — stream may be misaligned.");
                 Utility.PrintException(e);
             }

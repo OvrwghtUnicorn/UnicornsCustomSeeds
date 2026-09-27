@@ -320,7 +320,7 @@ namespace UnicornsCustomSeeds.Managers
                 }
                 else
                 {
-                    MelonLogger.Warning($"{listing.name} could not be cast to SeedDefinition");
+                    Utility.Warn($"{listing.name} could not be cast to SeedDefinition");
                 }
             }
         }
@@ -332,7 +332,6 @@ namespace UnicornsCustomSeeds.Managers
             var albertDeliveryShop = PlayerSingleton<DeliveryApp>.Instance?.GetShop("Albert Hoover");
             if (albertDeliveryShop == null)
             {
-                //Utility.Log("Albert delivery shop not ready, skipping delivery listing");
                 return;
             }
             ListingEntry listingEntry = UnityEngine.Object.Instantiate<ListingEntry>(albertDeliveryShop.ListingEntryPrefab, albertDeliveryShop.ListingContainer);

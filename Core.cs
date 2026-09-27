@@ -61,12 +61,15 @@ namespace UnicornsCustomSeeds
 
         public override void OnInitializeMelon()
         {
+            // Before AssetBundleUtils: it logs during Initialize, and the logging gate is one
+            // of the preferences created here. Created any later and bundle diagnostics would
+            // be suppressed even with debug logging switched on.
+            StashManager.InitializeConfig();
             AssetBundleUtils.Initialize(this);
         }
 
         public override void OnLateInitializeMelon()
         {
-            StashManager.InitializeConfig();
             SeedVisualsManager.LoadSeedMaterial();
             LoadManager.Instance.onLoadComplete.AddListener((UnityAction)InitMod);
             SaveManager.Instance.onSaveComplete.AddListener((UnityAction)SaveData);
@@ -170,6 +173,7 @@ namespace UnicornsCustomSeeds
             }
             else if (CustomCocaSeedsManager.factory == null)
             {
+                Utility.Critical("Unicorns Custom Seeds: coca seeds are unavailable — CocaFactory could not initialize.");
                 Utility.Error($"Core: CocaFactory init failed — cocaseed={baseCocaSeed != null}, cocaleaf={baseCocaLeaf != null}, cocainebase={baseCocaBase != null}");
             }
 
@@ -221,6 +225,7 @@ namespace UnicornsCustomSeeds
 
             if (timeoutFrames <= 0)
             {
+                Utility.Critical("Unicorns Custom Seeds: custom meth is unavailable — timed out waiting for the chemistry station's recipe list.");
                 Utility.Error("Core: Timed out waiting for ChemistryStationInterface.Recipes — PseudoFactory not initialized.");
                 yield break;
             }
@@ -253,6 +258,7 @@ namespace UnicornsCustomSeeds
                 }
                 else
                 {
+                    Utility.Critical("Unicorns Custom Seeds: custom meth is unavailable — PseudoFactory could not initialize.");
                     Utility.Error($"Core: PseudoFactory init failed — pseudo={basePseudo != null}, lowPseudo={lowPseudo != null}, highPseudo={highPseudo != null}, liquidmeth={baseLiquidMeth != null}, recipe={baseRecipe != null}");
                 }
             }

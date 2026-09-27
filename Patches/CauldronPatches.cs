@@ -68,60 +68,57 @@ namespace UnicornsCustomSeeds.Patches
     public class CauldronStartPatch
     {
         [HarmonyPostfix]
-   public static void Postfix(Cauldron __instance)
+        public static void Postfix(Cauldron __instance)
         {
-         if (__instance.isGhost) return;
+            if (__instance.isGhost) return;
 
             try
             {
-    // ── A) onCookEnd cleanup listener ─────────────────────────────────
-  var cauldron = __instance;
-    cauldron.onCookEnd.AddListener(new CookEndListener(() =>
-    {
-          try
-     {
-      if (CauldronBaseSwap.OriginalBase.TryGetValue(cauldron, out QualityItemDefinition original))
-        {
-      cauldron.CocaineBaseDefinition = original;
-       CauldronBaseSwap.OriginalBase.Remove(cauldron);
-        Utility.Log($"CauldronStartPatch.onCookEnd: Restored CocaineBaseDefinition on '{cauldron.name}'.");
-     }
+                // ── A) onCookEnd cleanup listener ─────────────────────────────────
+                var cauldron = __instance;
+                cauldron.onCookEnd.AddListener(new CookEndListener(() =>
+                {
+                    try
+                    {
+                        if (CauldronBaseSwap.OriginalBase.TryGetValue(cauldron, out QualityItemDefinition original))
+                        {
+                            cauldron.CocaineBaseDefinition = original;
+                            CauldronBaseSwap.OriginalBase.Remove(cauldron);
+                        }
 
-      string guid = cauldron.GUID.ToString();
-         if (ActiveCookingRegistry.GuidToMixId.ContainsKey(guid))
-      {
-   ActiveCookingRegistry.Unregister(guid);
-  Utility.Log($"CauldronStartPatch.onCookEnd: Cleared ActiveCookingRegistry for GUID={guid}.");
-          }
-      }
-        catch (Exception e) { Utility.PrintException(e); }
-     }));
+                        string guid = cauldron.GUID.ToString();
+                        if (ActiveCookingRegistry.GuidToMixId.ContainsKey(guid))
+                        {
+                            ActiveCookingRegistry.Unregister(guid);
+                        }
+                    }
+                    catch (Exception e) { Utility.PrintException(e); }
+                }));
 
-            // ── B) Restore saved custom cook on load ──────────────────────────
-             string savedGuid = __instance.GUID.ToString();
+                // ── B) Restore saved custom cook on load ──────────────────────────
+                string savedGuid = __instance.GUID.ToString();
                 string mixId = ActiveCookingRegistry.GetMixId(savedGuid);
-    if (mixId == null) return;
+                if (mixId == null) return;
 
                 string baseId = $"{mixId}_customcocainebase";
-      var rawBase = Registry.GetItem(baseId);
+                var rawBase = Registry.GetItem(baseId);
 #if IL2CPP
- QualityItemDefinition customBase = rawBase?.TryCast<QualityItemDefinition>();
+                QualityItemDefinition customBase = rawBase?.TryCast<QualityItemDefinition>();
 #elif MONO
              QualityItemDefinition customBase = rawBase as QualityItemDefinition;
 #endif
-    if (customBase == null)
-       {
- Utility.Error($"CauldronStartPatch: Could not resolve '{baseId}' — cauldron will finish with vanilla base.");
-       return;
-         }
+                if (customBase == null)
+                {
+                    Utility.Error($"CauldronStartPatch: Could not resolve '{baseId}' — cauldron will finish with vanilla base.");
+                    return;
+                }
 
-   if (!CauldronBaseSwap.OriginalBase.ContainsKey(__instance))
-      CauldronBaseSwap.OriginalBase[__instance] = __instance.CocaineBaseDefinition;
+                if (!CauldronBaseSwap.OriginalBase.ContainsKey(__instance))
+                    CauldronBaseSwap.OriginalBase[__instance] = __instance.CocaineBaseDefinition;
 
-    __instance.CocaineBaseDefinition = customBase;
-    Utility.Log($"CauldronStartPatch: Restored custom cook '{mixId}' on cauldron '{savedGuid}' from save.");
-   }
-   catch (Exception e) { Utility.PrintException(e); }
+                __instance.CocaineBaseDefinition = customBase;
+            }
+            catch (Exception e) { Utility.PrintException(e); }
         }
     }
 
@@ -178,8 +175,6 @@ namespace UnicornsCustomSeeds.Patches
                     }
                 }
 
-                Utility.Log($"CauldronPatches: Elected leaf '{winnerId}' " +
-     $"(count {counts[winnerId]}) on '{__instance.name}'.");
 
                 // ── Phase 3: set CocaineBaseDefinition + update ActiveCookingRegistry ──
                 if (CocaFactory.CustomLeafIdToBaseId.TryGetValue(winnerId, out string baseId))
@@ -196,13 +191,11 @@ namespace UnicornsCustomSeeds.Patches
                             CauldronBaseSwap.OriginalBase[__instance] = __instance.CocaineBaseDefinition;
 
                         __instance.CocaineBaseDefinition = customBase;
-                        Utility.Log($"CauldronPatches: Swapped CocaineBaseDefinition → '{customBase.ID}'.");
 
                         // Persist: record GUID → mixId so a save/reload can restore this
                         if (CocaFactory.CustomBaseIdToMixId.TryGetValue(baseId, out string mixId))
                         {
                             ActiveCookingRegistry.Register(__instance.GUID.ToString(), mixId);
-                            Utility.Log($"CauldronPatches: Registered active cook GUID={__instance.GUID} mixId={mixId}.");
 
                             // The swap above is LOCAL ONLY. CauldronTask.Success() is a
                             // PlayerTask, so on a client cook this whole method runs only on
@@ -239,7 +232,6 @@ namespace UnicornsCustomSeeds.Patches
                         __instance.CocaineBaseDefinition = original;
                         CauldronBaseSwap.OriginalBase.Remove(__instance);
                         ActiveCookingRegistry.Unregister(__instance.GUID.ToString());
-                        Utility.Log("CauldronPatches: Restored vanilla CocaineBaseDefinition for vanilla leaf winner.");
                     }
                 }
 
@@ -289,9 +281,9 @@ namespace UnicornsCustomSeeds.Patches
     [HarmonyPatch(typeof(Cauldron), nameof(Cauldron.RpcLogic___FinishCookOperation_2166136261))]
     public static class Patch_Cauldron_FinishCookOperation
     {
-   public static void Postfix(Cauldron __instance)
+        public static void Postfix(Cauldron __instance)
         {
-    Utility.Log($"CauldronPatches: RpcLogic___FinishCookOperation fired on '{__instance.name}' — cleanup handled by onCookEnd listener.");
+            Utility.Log($"CauldronPatches: RpcLogic___FinishCookOperation fired on '{__instance.name}' — cleanup handled by onCookEnd listener.");
         }
     }
 }

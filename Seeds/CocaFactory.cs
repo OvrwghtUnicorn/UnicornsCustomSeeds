@@ -137,7 +137,6 @@ namespace UnicornsCustomSeeds.Seeds
             Singleton<Registry>.Instance.AddToRegistry(customLeaf);
             Singleton<Registry>.Instance.AddToRegistry(customBase);
 
-            Utility.Log($"CocaFactory: {newSeed.ID} ? leaf:{customLeaf.ID} ? base:{customBase.ID} ? mix:{cocaineDef.ID}");
             return newSeed;
         }
 
@@ -285,7 +284,6 @@ namespace UnicornsCustomSeeds.Seeds
                 if (cookable != null)
                 {
                     cookable.Product = cocaineDef;
-                    Utility.Log($"CocaFactory: Set CookableModule.Product = {cocaineDef.ID}");
                 }
                 else
                 {
@@ -410,7 +408,6 @@ namespace UnicornsCustomSeeds.Seeds
                     }
                 }
             }
-            Utility.Log($"CocaFactory: Added '{customLeaf.ID}' to {patched} cauldron slot filter(s).");
         }
     }
 }

@@ -146,7 +146,6 @@ namespace UnicornsCustomSeeds.Managers
             }
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
-            Utility.Log($"CustomCocaSeedsManager: Registered seed '{newSeed.ID}' in Registry.");
 
             Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
             CustomSeedsManager.AddSeedToPots(newSeed);
@@ -179,7 +178,6 @@ namespace UnicornsCustomSeeds.Managers
                 string guidString = GUIDManager.GenerateUniqueGUID().ToString();
                 NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null, randomDrop.GUID.ToString(), guidString);
                 ConversationManager.SendMessage("Salvador", $"{cocaineDef.name} coca seed synthesized and placed in a dead drop.");
-                Utility.Log($"CustomCocaSeedsManager: Placed 3x '{newSeed.ID}' in dead drop '{randomDrop.GUID}'.");
             }
             else
             {
@@ -291,7 +289,6 @@ namespace UnicornsCustomSeeds.Managers
 #elif MONO
                     CreateShopListing((ScheduleOne.Growing.SeedDefinition)(object)newSeed, kvp.Value.price);
 #endif
-                    Utility.Log($"CustomCocaSeedsManager.RestoreLeafFilters: Rebuilt seed '{newSeed.ID}'.");
                 }
 
                 // Always re-add to cauldron filters � they are runtime objects reset each load.
@@ -300,7 +297,6 @@ namespace UnicornsCustomSeeds.Managers
                 if (leaf != null)
                 {
                     CocaFactory.AddLeafToCauldrons(leaf);
-                    Utility.Log($"CustomCocaSeedsManager.RestoreLeafFilters: Added '{leafId}' to cauldron filters.");
                 }
                 else
                 {

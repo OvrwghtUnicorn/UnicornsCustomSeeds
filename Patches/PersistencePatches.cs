@@ -72,7 +72,7 @@ namespace UnicornsCustomSeeds.Patches
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"PersistencePatches.StartGame: {ex}");
+                Utility.Error($"PersistencePatches.StartGame: {ex}");
             }
         }
 

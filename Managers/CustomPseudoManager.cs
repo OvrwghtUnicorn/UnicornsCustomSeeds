@@ -46,11 +46,11 @@ namespace UnicornsCustomSeeds.Managers
 {
     public static class CustomPseudoManager
     {
-        
+
         // 
-        public const string PSEUDO_BASE_ID     = "pseudo";
-        public const string PSEUDO_HI_ID     = "highqualitypseudo";
-        public const string PSEUDO_LO_ID     = "lowqualitypseudo";
+        public const string PSEUDO_BASE_ID = "pseudo";
+        public const string PSEUDO_HI_ID = "highqualitypseudo";
+        public const string PSEUDO_LO_ID = "lowqualitypseudo";
         public const string BASE_LIQUIDMETH_ID = "liquidmeth";
 
         public static PseudoFactory factory;
@@ -202,16 +202,6 @@ namespace UnicornsCustomSeeds.Managers
             swRecipe.Stop();
             swTotal.Stop();
 
-            Utility.Log(
-                // total now includes ~2 frames of yield return null (frame-spreading, not
-                // wasted work) — compare msChain/msPrice/msListing for actual CPU cost,
-                // not total, when judging whether this is still an improvement.
-                $"[PROFILE pseudo '{methDef.ID}'] total(incl. yields)={swTotal.ElapsedMilliseconds}ms | " +
-                $"CreatePseudoChain(x3, prefabs+icons, spread over 3 frames)={msChain}ms | " +
-                $"CalculatePseudoPrice(x3)={msPrice}ms | " +
-                $"CreateShopListing(x3)={msListing}ms | " +
-                $"InjectRecipeForMix={swRecipe.ElapsedMilliseconds}ms");
-
             string deadDropPseudoBaseId = ResolvePseudoBaseIdForQuality(quality);
             VariantSeedData deadDropVariant = newData.GetVariant(deadDropPseudoBaseId) ?? newData.variants[0];
             QualityItemDefinition deadDropPseudo = Registry.GetItem<QualityItemDefinition>(deadDropVariant.seedId);
@@ -226,7 +216,6 @@ namespace UnicornsCustomSeeds.Managers
                 string guidString = GUIDManager.GenerateUniqueGUID().ToString();
                 NetworkSingleton<QuestManager>.Instance.CreateDeaddropCollectionQuest(null, randomDrop.GUID.ToString(), guidString);
                 ConversationManager.SendMessage("Shirley", $"{methDef.name} pseudo synthesized and placed in a dead drop.");
-                Utility.Log($"CustomPseudoManager: Placed 5x '{deadDropPseudo.ID}' in dead drop '{randomDrop.GUID}'.");
             }
             else
             {
@@ -285,7 +274,6 @@ namespace UnicornsCustomSeeds.Managers
                         Utility.Error($"CustomPseudoManager.RestorePseudoFilters: CreatePseudoChain returned null for '{mixId}' / '{variant.baseItemId}'.");
                         continue;
                     }
-                    Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Rebuilt chain for '{mixId}' / '{variant.baseItemId}'.");
                 }
 
                 factory.InjectRecipeForMix(kvp.Value, mixId);
@@ -296,7 +284,6 @@ namespace UnicornsCustomSeeds.Managers
                     var pseudo = Registry.GetItem<QualityItemDefinition>(variant.seedId);
                     if (pseudo != null)
                     {
-                        Utility.Log($"CustomPseudoManager.RestorePseudoFilters: Confirmed '{variant.seedId}' in Registry.");
                     }
                     else
                     {
@@ -423,7 +410,7 @@ namespace UnicornsCustomSeeds.Managers
         private static float CalculatePseudoPrice(MethDefinition methDef, string pseudoBaseId)
         {
             float ingredientCost = StashManager.GetIngredientCost(methDef);
-            
+
             float pseudoBaseCost = 0f;
 
             var pseudoBase = Registry.GetItem<QualityItemDefinition>(pseudoBaseId);

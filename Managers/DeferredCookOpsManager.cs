@@ -256,6 +256,8 @@ namespace UnicornsCustomSeeds.Managers
                 int attempts = AttemptsForChemistry(station);
                 if (station == null || operation == null || attempts >= MaxAttempts)
                 {
+                    Utility.Critical($"Unicorns Custom Seeds: a chemistry station's cook could not " +
+                                     $"be restored after {attempts} attempts and will show as idle.");
                     Utility.Error($"[COOKWAIT] chemistry cook '{operation?.RecipeID}' failed " +
                                   $"{attempts} time(s) and is being dropped; the station will " +
                                   "show no cook in progress.");
@@ -294,6 +296,8 @@ namespace UnicornsCustomSeeds.Managers
                 int attempts = AttemptsForOven(oven);
                 if (oven == null || operation == null || attempts >= MaxAttempts)
                 {
+                    Utility.Critical($"Unicorns Custom Seeds: a lab oven's cook could not be " +
+                                     $"restored after {attempts} attempts and will show as idle.");
                     Utility.Error($"[COOKWAIT] oven cook '{operation?.IngredientID}' failed " +
                                   $"{attempts} time(s) and is being dropped; the oven will " +
                                   "show no cook in progress.");

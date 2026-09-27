@@ -36,7 +36,8 @@ namespace UnicornsCustomSeeds.TemplateUtils
             using Stream bundleStream = melonAssembly.Assembly.GetManifestResourceStream(streamPath);
             if (bundleStream == null)
             {
-                MelonLogger.Error($"AssetBundle resource '{streamPath}' not found. Check EmbeddedResource entry for '{bundleFileName}'.");
+                Utility.Critical($"Unicorns Custom Seeds: asset bundle '{bundleFileName}' is missing from the mod DLL — icons and shaders will not load.");
+                Utility.Error($"AssetBundle resource '{streamPath}' not found. Check EmbeddedResource entry for '{bundleFileName}'.");
                 return null;
             }
 
@@ -46,7 +47,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
 
             if (bundleData.Length == 0)
             {
-                MelonLogger.Error($"AssetBundle '{bundleFileName}' is empty.");
+                Utility.Critical($"Unicorns Custom Seeds: asset bundle '{bundleFileName}' is empty — icons and shaders will not load.");
                 return null;
             }
 
@@ -70,12 +71,12 @@ namespace UnicornsCustomSeeds.TemplateUtils
             try
             {
                 File.WriteAllBytes(bundlePath, bundleData);
-                MelonLogger.Msg($"Cached AssetBundle '{bundleFileName}' to '{bundlePath}'.");
+                Utility.Log($"Cached AssetBundle '{bundleFileName}' to '{bundlePath}'.");
                 return true;
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"Failed writing AssetBundle cache '{bundleFileName}': {ex}");
+                Utility.Error($"Failed writing AssetBundle cache '{bundleFileName}': {ex}");
                 return false;
             }
         }
@@ -88,14 +89,15 @@ namespace UnicornsCustomSeeds.TemplateUtils
                 AssetBundle bundle = Il2CppAssetBundleManager.LoadFromFile(bundlePath);
                 if (bundle == null)
                 {
-                    MelonLogger.Error($"LoadFromFile returned null for bundle '{bundleFileName}' at '{bundlePath}'.");
+                    Utility.Critical($"Unicorns Custom Seeds: asset bundle '{bundleFileName}' failed to load — icons and shaders will be missing.");
+                    Utility.Error($"LoadFromFile returned null for bundle '{bundleFileName}' at '{bundlePath}'.");
                 }
 
                 return bundle;
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"LoadFromFile failed for bundle '{bundleFileName}' at '{bundlePath}': {ex}");
+                Utility.Error($"LoadFromFile failed for bundle '{bundleFileName}' at '{bundlePath}': {ex}");
                 return null;
             }
         }
@@ -145,7 +147,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
                         try
                         {
                             File.WriteAllBytes(bundlePath, bundleData);
-                            MelonLogger.Msg($"Cached AssetBundle '{bundleFileName}' to '{bundlePath}'.");
+                            Utility.Log($"Cached AssetBundle '{bundleFileName}' to '{bundlePath}'.");
                         }
                         catch (Exception writeEx)
                         {
@@ -167,7 +169,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
                         }
                         catch (Exception unloadEx)
                         {
-                            MelonLogger.Warning($"Failed to unload memory validation bundle '{bundleFileName}': {unloadEx.Message}");
+                            Utility.Warn($"Failed to unload memory validation bundle '{bundleFileName}': {unloadEx.Message}");
                         }
 
                         ab = LoadBundleFromFile(bundleFileName);
@@ -233,7 +235,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
             }
             else
             {
-                MelonLogger.Warning($"Asset bundle '{bundleName}' is not loaded.");
+                Utility.Warn($"Asset bundle '{bundleName}' is not loaded.");
                 return null;
             }
         }
@@ -243,7 +245,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
             var bundle = GetLoadedAssetBundle(bundleName);
             if (bundle == null)
             {
-                MelonLogger.Error($"Couldn't find loaded bundle '{bundleName}'.");
+                Utility.Error($"Couldn't find loaded bundle '{bundleName}'.");
                 return null;
             }
 
@@ -254,13 +256,13 @@ namespace UnicornsCustomSeeds.TemplateUtils
             }
             catch (Exception ex)
             {
-                MelonLogger.Error($"Failed loading asset '{assetName}' from bundle '{bundleName}'. The bundle may be invalid or have a zero internal pointer. {ex}");
+                Utility.Error($"Failed loading asset '{assetName}' from bundle '{bundleName}'. The bundle may be invalid or have a zero internal pointer. {ex}");
                 return null;
             }
 
             if (asset == null)
             {
-                MelonLogger.Error($"Asset '{assetName}' not found in bundle '{bundleName}'.");
+                Utility.Error($"Asset '{assetName}' not found in bundle '{bundleName}'.");
                 return null;
             }
 
@@ -293,7 +295,7 @@ namespace UnicornsCustomSeeds.TemplateUtils
                 }
                 catch (Exception ex)
                 {
-                    MelonLogger.Warning($"Failed loading texture '{names[i]}' from bundle '{bundleName}': {ex.Message}");
+                    Utility.Warn($"Failed loading texture '{names[i]}' from bundle '{bundleName}': {ex.Message}");
                 }
             }
             return null;
