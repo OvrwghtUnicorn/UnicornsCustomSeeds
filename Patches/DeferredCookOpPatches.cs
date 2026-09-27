@@ -55,7 +55,15 @@ namespace UnicornsCustomSeeds.Patches
                 if (!InstanceFinder.IsClient || InstanceFinder.IsServer) return true;
                 if (operation == null) return true;
 
-                if (DeferredCookOpsManager.IsChemistryOpReady(operation)) return true;
+                bool ready = DeferredCookOpsManager.IsChemistryOpReady(operation);
+
+                // DIAGNOSTIC: a join showed the host cooking while the client showed nothing,
+                // with no line from this patch at all. This says whether the handler is even
+                // reached, and what the readiness check decided.
+                Utility.Log($"[COOKDIAG] chemistry handler reached for '{operation.RecipeID}' " +
+                            $"on '{__instance.name}' — ready={ready}.");
+
+                if (ready) return true;
 
                 DeferredCookOpsManager.ParkChemistry(__instance, operation);
                 return false;
@@ -73,6 +81,16 @@ namespace UnicornsCustomSeeds.Patches
                                          ChemistryCookOperation operation)
         {
             if (__exception == null) return null;
+
+            // HOST: do not touch it. This whole park/replay mechanism is client-side —
+            // TryReplayAll is only driven from the client's definition-rebuild paths, so a
+            // host-side park never replays. Worse, clearing CurrentCookOperation here left
+            // the host with no operation to send, so ChemistryStation.OnSpawnServer's
+            // "if (CurrentCookOperation != null)" skipped the send entirely and a joining
+            // client saw no cook at all. Returning the exception restores exactly the
+            // pre-patch behaviour: it surfaces in the log, and the operation stays set so it
+            // still replicates.
+            if (!InstanceFinder.IsClient || InstanceFinder.IsServer) return __exception;
 
             DeferredCookOpsManager.HandleChemistryFailure(__instance, operation, __exception);
 
@@ -111,9 +129,47 @@ namespace UnicornsCustomSeeds.Patches
         {
             if (__exception == null) return null;
 
+            // HOST: do not touch it. This whole park/replay mechanism is client-side —
+            // TryReplayAll is only driven from the client's definition-rebuild paths, so a
+            // host-side park never replays. Worse, clearing CurrentCookOperation here left
+            // the host with no operation to send, so ChemistryStation.OnSpawnServer's
+            // "if (CurrentCookOperation != null)" skipped the send entirely and a joining
+            // client saw no cook at all. Returning the exception restores exactly the
+            // pre-patch behaviour: it surfaces in the log, and the operation stays set so it
+            // still replicates.
+            if (!InstanceFinder.IsClient || InstanceFinder.IsServer) return __exception;
+
             DeferredCookOpsManager.HandleOvenFailure(__instance, operation, playButtonPress, __exception);
 
             return null;
         }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // DIAGNOSTIC — temporary. Remove once the chemistry cook question is settled.
+    //
+    // The readers run one level above RpcLogic and fire even when RpcLogic is skipped, e.g.
+    // the generated reader's own "if (!base.IsClientInitialized) return;" which drops the
+    // operation silently. Together with [COOKDIAG] in the RpcLogic prefix this gives a clean
+    // decision tree for a cook that never appears on the client:
+    //
+    //   neither line      → the host never sent it
+    //   reader only       → arrived but was dropped before the handler
+    //   reader + handler  → the handler ran, so the problem is downstream of this mod
+    //
+    // Patched by string name, not nameof: these readers are private.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HarmonyPatch(typeof(ChemistryStation), "RpcReader___Target_SetCookOperation_1024887225")]
+    public static class Diag_ChemistryStation_TargetCookReader
+    {
+        public static void Prefix(ChemistryStation __instance) =>
+            Utility.Log($"[COOKDIAG] chemistry cook packet arrived (Target) for '{__instance.name}'.");
+    }
+
+    [HarmonyPatch(typeof(ChemistryStation), "RpcReader___Observers_SetCookOperation_1024887225")]
+    public static class Diag_ChemistryStation_ObserversCookReader
+    {
+        public static void Prefix(ChemistryStation __instance) =>
+            Utility.Log($"[COOKDIAG] chemistry cook packet arrived (Observers) for '{__instance.name}'.");
     }
 }
