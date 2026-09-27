@@ -178,6 +178,7 @@ namespace UnicornsCustomSeeds
                 ProductManagerAppPatches.ClearPendingIndicators();
                 StashManager.ClearCaches();
                 DeferredSlotsManager.ClearAll();
+                DeferredCookOpsManager.ClearAll();
                 ModInitialized = false;
             }
             else

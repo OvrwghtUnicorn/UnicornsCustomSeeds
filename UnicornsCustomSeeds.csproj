@@ -48,6 +48,7 @@
 		<Compile Include="Managers\DeferredPlantsManager.cs" />
 		<Compile Include="Managers\DeferredSeedRebuildManager.cs" />
 		<Compile Include="Managers\DeferredSlotsManager.cs" />
+		<Compile Include="Managers\DeferredCookOpsManager.cs" />
 		<Compile Include="Managers\NetworkSyncManager.cs" />
 		<Compile Include="Managers\PhilStashManager.cs" />
 		<Compile Include="Managers\PseudoQuestManager.cs" />
@@ -58,6 +59,7 @@
 		<Compile Include="Patches\ItemLoadDiagnostics.cs" />
 		<Compile Include="Patches\ItemStreamGuard.cs" />
 		<Compile Include="Patches\DeferredSlotPatches.cs" />
+		<Compile Include="Patches\DeferredCookOpPatches.cs" />
 		<Compile Include="Patches\CauldronJoinSyncPatch.cs" />
 		<Compile Include="Patches\NetworkingPatches.cs" />
 		<Compile Include="Patches\ProductManagerAppPatches.cs" />

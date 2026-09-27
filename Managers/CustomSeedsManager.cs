@@ -521,6 +521,7 @@ namespace UnicornsCustomSeeds.Managers
                 DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
 
             DeferredSlotsManager.TryReplayAll();
+            DeferredCookOpsManager.TryReplayAll();
             return true;
         }
     }
