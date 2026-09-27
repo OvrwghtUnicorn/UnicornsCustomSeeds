@@ -389,6 +389,7 @@ namespace UnicornsCustomSeeds.Managers
             DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
 
             Utility.Log($"NetworkSyncManager: Rebuilt coca seed '{newSeed.ID}'.");
+            DeferredSlotsManager.TryReplayAll();
         }
 
         private static void RebuildShroom(UnicornSeedData data)
@@ -407,6 +408,7 @@ namespace UnicornsCustomSeeds.Managers
             catch (Exception ex) { Utility.PrintException(ex); }
 
             Utility.Log($"NetworkSyncManager: Rebuilt syringe '{newSyringe.ID}'.");
+            DeferredSlotsManager.TryReplayAll();
         }
 
         private static void RebuildPseudo(UnicornSeedData data)
@@ -441,6 +443,7 @@ namespace UnicornsCustomSeeds.Managers
             CustomPseudoManager.factory.InjectRecipeForMix(data, data.mixId);
 
             Utility.Log($"NetworkSyncManager: Rebuilt pseudo chain for '{data.mixId}'.");
+            DeferredSlotsManager.TryReplayAll();
         }
     }
 }

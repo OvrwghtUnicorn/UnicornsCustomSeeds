@@ -47,6 +47,21 @@ namespace UnicornsCustomSeeds.Patches
 
         public static int RescuedCount => rescued;
 
+        // What the most recent skip drained, for DeferredSlotPatches to pick up in its
+        // postfix. The guard is nested inside the container's RPC reader, so the reader
+        // patch knows the destination slot but not the item, and this knows the item but
+        // not the destination. Single-item-per-RPC, so one slot of state is enough.
+        public static string LastSkippedId { get; private set; }
+        public static ItemInstance LastSkippedStandIn { get; private set; }
+        public static int LastSkippedQuantity { get; private set; }
+
+        public static void ClearLastSkipped()
+        {
+            LastSkippedId = null;
+            LastSkippedStandIn = null;
+            LastSkippedQuantity = 0;
+        }
+
         public static bool Prefix(Reader reader, ref ItemInstance __result)
         {
             int start = reader.Position;
@@ -71,7 +86,11 @@ namespace UnicornsCustomSeeds.Patches
 
             try
             {
-                DrainRemainder(reader, id);
+                ClearLastSkipped();
+                LastSkippedStandIn = DrainRemainder(reader, id);
+                LastSkippedId = id;
+                if (LastSkippedStandIn != null)
+                    LastSkippedQuantity = LastSkippedStandIn.Quantity;
                 rescued++;
                 Utility.Error($"[ITEMGUARD] '{id}' is not registered on this client — slot left empty, " +
                               $"stream kept aligned ({rescued} rescued).");
@@ -97,7 +116,12 @@ namespace UnicornsCustomSeeds.Patches
         /// quality (ushort), and so on. Falling back to a bare quantity read is correct
         /// for the plain case and is the best guess available otherwise.
         /// </summary>
-        private static void DrainRemainder(Reader reader, string id)
+        /// <returns>
+        /// The stand-in it read into, which now holds the real item's quantity and, for a
+        /// QualityItemInstance, its quality — everything needed to reconstruct the item
+        /// later. Null when it had to fall back to a bare quantity read.
+        /// </returns>
+        private static ItemInstance DrainRemainder(Reader reader, string id)
         {
             string baseId = ResolveBaseId(id);
 
@@ -110,7 +134,7 @@ namespace UnicornsCustomSeeds.Patches
                     if (standIn != null)
                     {
                         standIn.Read(reader);
-                        return;
+                        return standIn;
                     }
                 }
 
@@ -119,7 +143,8 @@ namespace UnicornsCustomSeeds.Patches
             }
 
             // Plain ItemInstance layout: quantity only.
-            reader.ReadUInt16();
+            LastSkippedQuantity = reader.ReadUInt16();
+            return null;
         }
 
         /// <summary>

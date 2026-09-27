@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using System.Collections;
 using UnityEngine.Events;
 using UnicornsCustomSeeds.Seeds;
@@ -177,6 +177,7 @@ namespace UnicornsCustomSeeds
                 UnicornsCustomSeeds.Managers.ActiveCookingRegistry.Clear();
                 ProductManagerAppPatches.ClearPendingIndicators();
                 StashManager.ClearCaches();
+                DeferredSlotsManager.ClearAll();
                 ModInitialized = false;
             }
             else

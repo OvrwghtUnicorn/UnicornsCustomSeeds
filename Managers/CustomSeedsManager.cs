@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using Newtonsoft.Json;
 using System.Collections;
 using UnicornsCustomSeeds.Seeds;
@@ -520,6 +520,7 @@ namespace UnicornsCustomSeeds.Managers
             if (InstanceFinder.IsClient)
                 DeferredPlantsManager.TrySpawnQueuedPlants(newSeed.ID);
 
+            DeferredSlotsManager.TryReplayAll();
             return true;
         }
     }
