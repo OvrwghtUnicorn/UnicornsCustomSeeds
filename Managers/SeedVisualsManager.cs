@@ -12,11 +12,55 @@ namespace UnicornsCustomSeeds.Managers
     public static class SeedVisualsManager
     {
         public static Dictionary<string, Sprite> seedIcons = new Dictionary<string, Sprite>();
-        public static Dictionary<string, WeedAppearanceSettings> appearanceMap = new Dictionary<string, WeedAppearanceSettings>();
+        // One appearance map per drug type. They cannot share a dictionary: each game
+        // appearance class is unrelated, and ShroomAppearanceSettings names its first
+        // colour PrimaryColor rather than MainColor. Each manager's ClearAll empties its
+        // own map — required, not optional, since returning to the menu invalidates the
+        // objects these entries describe.
+        public static Dictionary<string, WeedAppearanceSettings> weedAppearanceMap = new Dictionary<string, WeedAppearanceSettings>();
+        public static Dictionary<string, CocaineAppearanceSettings> cocaAppearanceMap = new Dictionary<string, CocaineAppearanceSettings>();
+        public static Dictionary<string, ShroomAppearanceSettings> shroomAppearanceMap = new Dictionary<string, ShroomAppearanceSettings>();
+        public static Dictionary<string, MethAppearanceSettings> pseudoAppearanceMap = new Dictionary<string, MethAppearanceSettings>();
+
+        /// <summary>
+        /// Resolves a vial label's two colours for an item ID, whichever drug it belongs
+        /// to. Returns false when nothing is registered — callers must not fall back to
+        /// the default Color, which is transparent black and paints the label out.
+        /// </summary>
+        public static bool TryGetLabelColors(string id, out Color main, out Color secondary)
+        {
+            main = default;
+            secondary = default;
+            if (string.IsNullOrEmpty(id)) return false;
+
+            if (weedAppearanceMap.TryGetValue(id, out var weed) && weed != null)
+            {
+                main = weed.MainColor; secondary = weed.SecondaryColor; return true;
+            }
+
+            if (cocaAppearanceMap.TryGetValue(id, out var coca) && coca != null)
+            {
+                main = coca.MainColor; secondary = coca.SecondaryColor; return true;
+            }
+
+            // PrimaryColor, not MainColor — this one is shaped differently.
+            if (shroomAppearanceMap.TryGetValue(id, out var shroom) && shroom != null)
+            {
+                main = shroom.PrimaryColor; secondary = shroom.SecondaryColor; return true;
+            }
+
+            if (pseudoAppearanceMap.TryGetValue(id, out var pseudo) && pseudo != null)
+            {
+                main = pseudo.MainColor; secondary = pseudo.SecondaryColor; return true;
+            }
+
+            return false;
+        }
 
         public static Shader customShader;
         public static Material customMat;
         public static Sprite baseSeedSprite;
+        public static Sprite baseCocaSeedSprite;
         public static Sprite baseShroomSpawnSprite;
         public static Sprite baseSyringeSprite;
         public static Sprite basePseudoSprite;
@@ -55,6 +99,14 @@ namespace UnicornsCustomSeeds.Managers
                 {
                     baseSeedSprite = BaseSeedIconSprite;
                     UnityEngine.Object.DontDestroyOnLoad(baseSeedSprite);
+                }
+
+                Sprite BaseCocaSeedIconSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("cokecustomseedicon.png", "customshaders");
+
+                if (BaseCocaSeedIconSprite != null)
+                {
+                    baseCocaSeedSprite = BaseCocaSeedIconSprite;
+                    UnityEngine.Object.DontDestroyOnLoad(baseCocaSeedSprite);
                 }
 
                 Sprite BaseShroomSpawnIconSprite = AssetBundleUtils.LoadAssetFromBundle<Sprite>("shroomspawnicon.png", "customshaders");

@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using UnicornsCustomSeeds.TemplateUtils;
 
 
@@ -32,7 +32,7 @@ namespace UnicornsCustomSeeds.Managers
         private static Dictionary<string, List<PropertyItemDefinition>> ingredientsCache = new Dictionary<string, List<PropertyItemDefinition>>();
         private static Dictionary<string, float> ingredientCostCache = new Dictionary<string, float>();
         // Base strain product ID -> the SeedDefinition that grows it. Nulls are cached too.
-        private static Dictionary<string, SeedDefinition> baseStrainSeedCache = new Dictionary<string, SeedDefinition>();
+        private static Dictionary<string, StorableItemDefinition> baseStrainItemCache = new Dictionary<string, StorableItemDefinition>();
         private static float lastClosedTime = 0f;
         public static SupplierStash albertsStash;
 
@@ -284,14 +284,16 @@ namespace UnicornsCustomSeeds.Managers
                     continue;
                 }
 								
-                SeedDefinition seed = ResolveSeedForProduct(product);
-                if (seed != null)
-								{
-                    totalCost += seed.BasePurchasePrice;
-                }
-                else
+                StorableItemDefinition baseItem = ResolveBaseItemForProduct(product);
+                if (baseItem != null)
                 {
-                    Utility.Error($"StashManager: no SeedDefinition for base strain '{product.ID}' — its price is missing from the total.");
+                    totalCost += baseItem.BasePurchasePrice;
+                }
+                else if (GetDrugTypeSafe(product) == EDrugType.Marijuana)
+                {
+                    // Only weed is a real miss here; the others contribute nothing by design.
+                    Utility.Error($"StashManager: no seed resolved for weed strain '{product.ID}' " +
+                                  "— its price is missing from the total.");
                 }
             }
             return totalCost;
@@ -303,18 +305,56 @@ namespace UnicornsCustomSeeds.Managers
         /// vanilla for coca (cocaleaf resolves to cocaseed) — so it is used as a fast path
         /// with a real reverse lookup as the fallback.
         /// </summary>
-        private static SeedDefinition ResolveSeedForProduct(ProductDefinition product)
+        /// <summary>
+        /// Resolves the purchased item whose price belongs in this mix's total — which is
+        /// WEED ONLY, and deliberately so.
+        ///
+        /// Weed's caller assigns the result (price = GetIngredientCost(weedDef)), so the
+        /// seed has to be counted here. Every other drug's caller adds its own base:
+        /// CalculatePseudoPrice adds the chosen pseudo tier (there are three — pseudo,
+        /// lowqualitypseudo, highqualitypseudo — and only the caller knows which), while
+        /// the coca and shroom factories do "+=" onto a clone that already carries the
+        /// cocaseed / sporesyringe price. Returning a base item for those would
+        /// double-count it, and for meth would also bake in the wrong tier.
+        /// </summary>
+        private static StorableItemDefinition ResolveBaseItemForProduct(ProductDefinition product)
         {
-            if (baseStrainSeedCache.TryGetValue(product.ID, out SeedDefinition cached))
+            if (baseStrainItemCache.TryGetValue(product.ID, out StorableItemDefinition cached))
                 return cached;
 
-            SeedDefinition seed = Registry.GetItem<SeedDefinition>(product.ID + "seed");
-            if (seed == null)
-                seed = FindSeedByHarvestedProduct(product);
+            StorableItemDefinition item = null;
+
+            if (GetDrugTypeSafe(product) == EDrugType.Marijuana)
+            {
+                // Per-strain: ogkush -> ogkushseed, with a plant-prefab scan for the
+                // custom strains where that naming convention does not hold.
+                item = Registry.GetItem<SeedDefinition>(product.ID + "seed");
+                if (item == null) item = FindSeedByHarvestedProduct(product);
+            }
 
             // Cache nulls too, so a strain that resolves to nothing doesn't rescan every call.
-            baseStrainSeedCache[product.ID] = seed;
-            return seed;
+            baseStrainItemCache[product.ID] = item;
+            return item;
+        }
+
+        /// <summary>
+        /// ProductDefinition.DrugType indexes DrugTypes[0] with no guard, so it throws on a
+        /// definition whose list is empty. Returns null rather than taking the game down.
+        /// </summary>
+        private static EDrugType? GetDrugTypeSafe(ProductDefinition product)
+        {
+            try
+            {
+                if (product == null || product.DrugTypes == null || product.DrugTypes.Count == 0)
+                    return null;
+
+                return product.DrugType;
+            }
+            catch (Exception ex)
+            {
+                Utility.PrintException(ex);
+                return null;
+            }
         }
 
         /// <summary>
@@ -358,7 +398,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             ingredientsCache.Clear();
             ingredientCostCache.Clear();
-            baseStrainSeedCache.Clear();
+            baseStrainItemCache.Clear();
         }
 
         public static List<PropertyItemDefinition> DeepSearchRecipe(ProductDefinition product)

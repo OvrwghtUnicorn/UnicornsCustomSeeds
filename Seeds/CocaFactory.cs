@@ -124,6 +124,11 @@ namespace UnicornsCustomSeeds.Seeds
             newSeed.Description = $"A custom coca seed that produces {cocaineDef.name}.";
             newSeed.Icon = baseSeedDefinition.Icon;
 
+            // The appearance was resolved at the top of this method but never reached the
+            // vial label, so coca labels rendered transparent black. Register before the
+            // functional seed is cloned, since that is what attaches SeedVialLabel.
+            SeedVisualsManager.cocaAppearanceMap[newSeed.ID] = appearance;
+
             newSeed.PlantPrefab = newPlant;
             newSeed.PlantPrefab.SeedDefinition = newSeed;
             newSeed.FunctionSeedPrefab = CloneFunctionalSeedPrefab(newSeed.ID);
@@ -183,8 +188,8 @@ namespace UnicornsCustomSeeds.Seeds
                 Utility.Log($"[COKE] Main Color: {appearance.MainColor}, Secondary Color: {appearance.SecondaryColor}");
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                    SeedVisualsManager.baseSeedSprite, top, bottom,
-                    SeedVisualsManager.FillKeyColor, rotationDegrees: CocaIconRotation);
+                    SeedVisualsManager.baseCocaSeedSprite, top, bottom,
+                    SeedVisualsManager.FillKeyColor);
                 newIcon.name = newSeed.name + "_icon";
                 SeedVisualsManager.seedIcons[newSeed.ID] = newIcon;
                 newSeed.Icon = newIcon;

@@ -288,6 +288,7 @@ namespace UnicornsCustomSeeds.Managers
         public static void ClearAll()
         {
             DiscoveredShrooms.Clear();
+            SeedVisualsManager.shroomAppearanceMap.Clear();
             PhilShop = null;
             PhilShopGo = null;
             phil = null;

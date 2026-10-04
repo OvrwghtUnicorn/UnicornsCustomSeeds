@@ -1,0 +1,150 @@
+name: Publish release
+
+# Triggered when you publish a GitHub release. Build locally, then create the release
+# with the two DLLs attached:
+#   stable: gh release create v1.1.3 BundleInfo/UnicornsCustomSeeds_*_1.1.3.dll --notes-file notes.md
+#   beta:   gh release create beta-1.1.3-1 BundleInfo/UnicornsCustomSeeds_*_1.1.3.dll --prerelease --target <branch>
+# Beta (beta-*) releases keep just the raw DLLs you attached; the workflow does nothing else.
+# Stable releases get zips attached and are uploaded to Thunderstore and Nexus.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish (e.g. v1.1.3)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NEXUS_API_KEY: ${{ secrets.NEXUS_API_KEY }}
+      THUNDERSTORE_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
+      THUNDERSTORE_NAMESPACE: ${{ vars.THUNDERSTORE_NAMESPACE }}
+      THUNDERSTORE_COMMUNITY: ${{ vars.THUNDERSTORE_COMMUNITY || 'schedule-i' }}
+      NEXUS_FILE_GROUP_IL2CPP: ${{ vars.NEXUS_FILE_GROUP_IL2CPP }}
+      NEXUS_FILE_GROUP_MONO: ${{ vars.NEXUS_FILE_GROUP_MONO }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Download DLLs and check version
+        id: ver
+        shell: pwsh
+        run: |
+          # Tags starting with "beta-" are test builds: GitHub prerelease only, no
+          # version check, no Thunderstore/Nexus upload.
+          $beta = $env:TAG.StartsWith('beta-')
+          $version = $env:TAG.TrimStart('v')
+          if (-not $beta) {
+            $manifest = Get-Content BundleInfo/manifest.json -Raw | ConvertFrom-Json
+            if ($manifest.version_number -ne $version) {
+              throw "Tag $env:TAG does not match manifest.json version $($manifest.version_number)"
+            }
+          }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          gh release download $env:TAG --pattern '*.dll' --dir dist
+          if ($LASTEXITCODE -ne 0) { throw "Could not download DLLs from release $env:TAG" }
+          $il2cpp = Get-ChildItem dist -Filter 'UnicornsCustomSeeds_IL2Cpp_*.dll'
+          $mono   = Get-ChildItem dist -Filter 'UnicornsCustomSeeds_Mono_*.dll'
+          if (-not $il2cpp -or -not $mono) { throw "Release must have both an IL2Cpp and a Mono DLL attached" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "beta=$($beta.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $il2cpp = (Get-ChildItem dist -Filter 'UnicornsCustomSeeds_IL2Cpp_*.dll').FullName
+          $mono   = (Get-ChildItem dist -Filter 'UnicornsCustomSeeds_Mono_*.dll').FullName
+          Compress-Archive -Path $il2cpp -DestinationPath dist/UnicornsCustomSeeds_IL2Cpp.zip -Force
+          Compress-Archive -Path $mono   -DestinationPath dist/UnicornsCustomSeeds_Mono.zip -Force
+
+          # Thunderstore package: manifest/icon/readme/changelog + both DLLs.
+          $stage = 'dist/ts'
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          foreach ($f in 'manifest.json', 'icon.png', 'README.md', 'CHANGELOG.md') { Copy-Item "BundleInfo/$f" $stage }
+          Copy-Item $il2cpp, $mono $stage
+          Compress-Archive -Path "$stage/*" -DestinationPath dist/UnicornsCustomSeeds_TS.zip -Force
+
+      - name: Attach zips to release
+        if: steps.ver.outputs.beta != 'true'
+        run: gh release upload "$TAG" dist/UnicornsCustomSeeds_IL2Cpp.zip dist/UnicornsCustomSeeds_Mono.zip --clobber
+
+      - name: Attach Thunderstore zip to release
+        if: steps.ver.outputs.beta != 'true'
+        run: gh release upload "$TAG" dist/UnicornsCustomSeeds_TS.zip --clobber
+
+      - name: Publish to Thunderstore
+        if: steps.ver.outputs.beta != 'true' && env.THUNDERSTORE_TOKEN != '' && env.THUNDERSTORE_NAMESPACE != ''
+        shell: pwsh
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.THUNDERSTORE_TOKEN }}
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $tcliVersion = '0.2.4'
+          Invoke-WebRequest "https://github.com/thunderstore-io/thunderstore-cli/releases/download/$tcliVersion/tcli-$tcliVersion-linux-x64.tar.gz" -OutFile tcli.tar.gz
+          New-Item -ItemType Directory -Force tcli | Out-Null
+          tar -xzf tcli.tar.gz -C tcli
+          $tcli = (Get-ChildItem tcli -Recurse -File -Filter tcli | Select-Object -First 1).FullName
+          chmod +x $tcli
+
+          $manifest = Get-Content BundleInfo/manifest.json -Raw | ConvertFrom-Json
+          $deps = ($manifest.dependencies | ForEach-Object {
+            # "Team-Name-1.2.3" -> Team-Name = "1.2.3"
+            $i = $_.LastIndexOf('-'); '"{0}" = "{1}"' -f $_.Substring(0, $i), $_.Substring($i + 1)
+          }) -join "`n"
+
+          @"
+          [config]
+          schemaVersion = "0.0.1"
+
+          [package]
+          namespace = "$env:THUNDERSTORE_NAMESPACE"
+          name = "$($manifest.name)"
+          versionNumber = "$v"
+          description = "$($manifest.description)"
+          websiteUrl = "$($manifest.website_url)"
+
+          [package.dependencies]
+          $deps
+
+          [publish]
+          repository = "https://thunderstore.io"
+          communities = ["$env:THUNDERSTORE_COMMUNITY"]
+
+          [publish.categories]
+          $env:THUNDERSTORE_COMMUNITY = ["mods"]
+          "@ -replace '(?m)^ {10}', '' | Set-Content dist/thunderstore.toml -Encoding utf8
+
+          & $tcli publish --config-path dist/thunderstore.toml --file dist/UnicornsCustomSeeds_TS.zip
+          if ($LASTEXITCODE -ne 0) { throw "Thunderstore publish failed" }
+
+      - name: Publish to Nexus (IL2CPP)
+        if: steps.ver.outputs.beta != 'true' && env.NEXUS_API_KEY != '' && env.NEXUS_FILE_GROUP_IL2CPP != ''
+        uses: Nexus-Mods/upload-action@v1
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_id: ${{ vars.NEXUS_FILE_GROUP_IL2CPP }}
+          filename: dist/UnicornsCustomSeeds_IL2Cpp.zip
+          version: ${{ steps.ver.outputs.version }}
+          display_name: Unicorns Custom Seeds (IL2CPP)
+          file_category: main
+
+      - name: Publish to Nexus (Mono)
+        if: steps.ver.outputs.beta != 'true' && env.NEXUS_API_KEY != '' && env.NEXUS_FILE_GROUP_MONO != ''
+        uses: Nexus-Mods/upload-action@v1
+        with:
+          api_key: ${{ secrets.NEXUS_API_KEY }}
+          file_id: ${{ vars.NEXUS_FILE_GROUP_MONO }}
+          filename: dist/UnicornsCustomSeeds_Mono.zip
+          version: ${{ steps.ver.outputs.version }}
+          display_name: Unicorns Custom Seeds (Mono)
+          file_category: main

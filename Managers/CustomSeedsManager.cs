@@ -150,7 +150,7 @@ namespace UnicornsCustomSeeds.Managers
         public static void ClearAll()
         {
             SeedVisualsManager.seedIcons.Clear();
-            SeedVisualsManager.appearanceMap.Clear();
+            SeedVisualsManager.weedAppearanceMap.Clear();
             SeedQuestManager.seedDropoff = null;
             DiscoveredSeeds.Clear();
             factory.DeleteChildren();
@@ -242,22 +242,15 @@ namespace UnicornsCustomSeeds.Managers
             MelonCoroutines.Start(CreateSeed(weedDef));
         }
 
+        /// <summary>
+        /// Retained entry point for weed broadcasts; the send itself now lives on the
+        /// shared path with the other three drugs.
+        ///
+        /// NetworkSyncManager.Broadcast must send weed inline — if its Marijuana arm
+        /// called back here, the two would recurse forever.
+        /// </summary>
         public static void BroadcastCustomSeed(UnicornSeedData seed)
-        {
-            ProductManager prodManager = NetworkSingleton<ProductManager>.Instance;
-            string json = JsonConvert.SerializeObject(seed);
-            string payload = "[NET-JSON]" + json;
-
-            var props = new GenericCol.List<string>();
-            var appearance = new WeedAppearanceSettings(
-                prodManager.DefaultWeed.MainMat.color,
-                prodManager.DefaultWeed.SecondaryMat.color,
-                prodManager.DefaultWeed.LeafMat.color,
-                prodManager.DefaultWeed.StemMat.color);
-
-            prodManager.CreateWeed_Server(payload, BASE_SEED_ID,
-                                             EDrugType.Marijuana, props, appearance);
-        }
+            => NetworkSyncManager.Broadcast(seed);
 
         public static IEnumerator CreateSeed(WeedDefinition weedDef)
         {

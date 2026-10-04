@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
@@ -335,6 +335,7 @@ namespace UnicornsCustomSeeds.Managers
         public static void ClearAll()
         {
             DiscoveredPseudoSeeds.Clear();
+            SeedVisualsManager.pseudoAppearanceMap.Clear();
             ShirleyShop = null;
             shirley = null;
             if (factory != null) factory.DeleteChildren();

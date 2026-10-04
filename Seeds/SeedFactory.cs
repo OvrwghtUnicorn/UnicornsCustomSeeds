@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnicornsCustomSeeds.Managers;
 using UnicornsCustomSeeds.TemplateUtils;
 
@@ -321,14 +321,17 @@ namespace UnicornsCustomSeeds.Seeds
             newSeedDef.Description = $"{weedDef.name} Seed";
             newSeedDef.Icon = baseSeedDefinition.Icon;
 
+            // Registered before anything clones a label: SeedVialLabel.Start resolves its
+            // colours from this map, and the old ordering only worked because Start is
+            // deferred a frame.
+            SeedVisualsManager.weedAppearanceMap[newSeedDef.ID] = weedAppearance;
+
             newSeedDef.Equippable = CloneEquippableSeedPrefab(newSeedDef,weedAppearance);
             newSeedDef.PlantPrefab = ClonePlantPrefab(weedDef);
             newSeedDef.PlantPrefab.SeedDefinition = newSeedDef;
             newSeedDef.FunctionSeedPrefab = CloneFunctionalSeedPrefab(newSeedDef.ID);
             newSeedDef.FunctionSeedPrefab.name = $"{weedDef.ID}Seed_Functional";
             newSeedDef.StoredItem = CloneStoredItem(newSeedDef.ID);
-
-            SeedVisualsManager.appearanceMap.Add(newSeedDef.ID, weedAppearance);
 
             if (SeedVisualsManager.baseSeedSprite != null) {
                 try

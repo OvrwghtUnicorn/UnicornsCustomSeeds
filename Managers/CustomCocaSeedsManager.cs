@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using MelonLoader;
@@ -237,6 +237,7 @@ namespace UnicornsCustomSeeds.Managers
         public static void ClearAll()
         {
             DiscoveredCocaSeeds.Clear();
+            SeedVisualsManager.cocaAppearanceMap.Clear();
             SalvadorShop = null;
             salvador = null;
             if (factory != null) factory.DeleteChildren();

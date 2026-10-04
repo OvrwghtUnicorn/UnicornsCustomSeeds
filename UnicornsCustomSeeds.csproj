@@ -56,7 +56,6 @@
 		<Compile Include="Managers\ShirleyStashManager.cs" />
 		<Compile Include="Managers\ShroomQuestManager.cs" />
 		<Compile Include="Patches\CauldronPatches.cs" />
-		<Compile Include="Patches\ItemLoadDiagnostics.cs" />
 		<Compile Include="Patches\ItemStreamGuard.cs" />
 		<Compile Include="Patches\DeferredSlotPatches.cs" />
 		<Compile Include="Patches\DeferredCookOpPatches.cs" />

@@ -79,25 +79,9 @@ namespace UnicornsCustomSeeds.Patches
             if (connection.IsHost)
                 return;
 
-            var props = new GenericCol.List<string>();
-            var appearance = new WeedAppearanceSettings(
-                __instance.DefaultWeed.MainMat.color,
-                __instance.DefaultWeed.SecondaryMat.color,
-                __instance.DefaultWeed.LeafMat.color,
-                __instance.DefaultWeed.StemMat.color);
-
-            foreach (var seed in CustomSeedsManager.DiscoveredSeeds)
-            {
-                //Utility.Log($"requesting to create {seed.Value.seedId}");
-                __instance.CreateWeed_Server(
-                    "[NET-JSON]" + JsonConvert.SerializeObject(seed.Value, Formatting.None),
-                    "ogkushseed",
-                    EDrugType.Marijuana,
-                    props,
-                    appearance);
-            }
-
-            // Coca / shroom / pseudo ride their own Create*_Server channels.
+            // All four drug types now replay through the same path. The old inline weed
+            // loop had no per-item try/catch, so one throw silently killed every
+            // remaining send; Broadcast isolates and logs each item.
             NetworkSyncManager.BroadcastAllDiscovered();
         }
     }
@@ -272,16 +256,15 @@ namespace UnicornsCustomSeeds.Patches
             {
                 UnicornSeedData seedData = JsonConvert.DeserializeObject<UnicornSeedData>(serializedString);
 
-                // One line per payload: how many of the host's seeds actually arrived, and
-                // which of them lost the race against their own base mix.
-                bool mixReady = Registry.GetItem<WeedDefinition>(seedData.mixId) != null;
-                bool built = CustomSeedsManager.RebuildFromPayload(seedData);
+                // How many of the host's seeds actually arrived, and whether the base mix
+                // was there in time. Client-only: the host re-receives its own broadcast
+                // via RunLocally and already logs the send side as "Broadcast ... mix".
+                if (InstanceFinder.IsClientOnly)
+                    Utility.Log($"[NET-JSON] seed='{seedData.seedId}' mix='{seedData.mixId}' " +
+                                $"mixReady={Registry.GetItem<WeedDefinition>(seedData.mixId) != null}");
 
-                Utility.Log($"[NET-JSON] seed='{seedData.seedId}' mix='{seedData.mixId}' " +
-                            $"mixReady={mixReady} built={built}");
-
-                if (!built)
-                    DeferredSeedRebuildManager.Park(seedData);
+                // Shared with coca/shroom/pseudo; parks itself if the mix is not here yet.
+                NetworkSyncManager.RebuildFromNetwork(seedData);
             }
             catch (Exception ex)
             {

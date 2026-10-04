@@ -58,6 +58,7 @@ namespace UnicornsCustomSeeds.Managers
         public const string SENTINEL_COCA = CustomCocaSeedsManager.BASE_SEED_ID;      // "cocaseed"
         public const string SENTINEL_SHROOM = CustomShroomsManager.BASE_SYRINGE_ID;     // "sporesyringe"
         public const string SENTINEL_METH = CustomPseudoManager.BASE_LIQUIDMETH_ID;   // "liquidmeth"
+        public const string SENTINEL_WEED = CustomSeedsManager.BASE_SEED_ID;         // "ogkushseed"
 
         // ─────────────────────────────────────────────────────────────────────
         // Send
@@ -67,19 +68,41 @@ namespace UnicornsCustomSeeds.Managers
         /// Broadcast one discovered item to all clients on its drug type's channel.
         /// Server-only; harmless no-op elsewhere.
         /// </summary>
+        /// <summary>
+        /// True only when a remote player is actually connected.
+        ///
+        /// InstanceFinder.IsServer is true in singleplayer too — FishNet still runs a local
+        /// host — so guarding on it alone meant every synthesis broadcast to nobody, ran the
+        /// receive path locally via RunLocally, and logged a Broadcast line in a solo game.
+        /// Checked per connection rather than by Clients.Count, since whether the host's own
+        /// connection is listed there is a transport detail.
+        /// </summary>
+        public static bool HasRemoteClients()
+        {
+            try
+            {
+                var sm = InstanceFinder.ServerManager;
+                if (sm == null || sm.Clients == null) return false;
+
+                foreach (var kvp in sm.Clients)
+                    if (kvp.Value != null && !kvp.Value.IsHost) return true;
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Utility.PrintException(ex);
+                return false;   // never broadcast on an unknown connection state
+            }
+        }
+
         public static void Broadcast(UnicornSeedData data)
         {
             if (data == null || !InstanceFinder.IsServer) return;
+            if (!HasRemoteClients()) return;   // solo game: nobody to tell
 
             try
             {
-                // Weed keeps its existing, already-working broadcast path.
-                if (data.drugType == EDrugType.Marijuana)
-                {
-                    CustomSeedsManager.BroadcastCustomSeed(data);
-                    return;
-                }
-
                 ProductManager pm = NetworkSingleton<ProductManager>.Instance;
                 if (pm == null)
                 {
@@ -92,6 +115,15 @@ namespace UnicornsCustomSeeds.Managers
 
                 switch (data.drugType)
                 {
+                    case EDrugType.Marijuana:
+                        pm.CreateWeed_Server(payload, SENTINEL_WEED, EDrugType.Marijuana, props,
+                            new WeedAppearanceSettings(
+                                pm.DefaultWeed.MainMat.color,
+                                pm.DefaultWeed.SecondaryMat.color,
+                                pm.DefaultWeed.LeafMat.color,
+                                pm.DefaultWeed.StemMat.color));
+                        break;
+
                     case EDrugType.Cocaine:
                         pm.CreateCocaine_Server(payload, SENTINEL_COCA, EDrugType.Cocaine,
                                                 props, new CocaineAppearanceSettings());
@@ -282,6 +314,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             if (!InstanceFinder.IsServer) return;
 
+            foreach (var kvp in CustomSeedsManager.DiscoveredSeeds) Broadcast(kvp.Value);
             foreach (var kvp in CustomCocaSeedsManager.DiscoveredCocaSeeds) Broadcast(kvp.Value);
             foreach (var kvp in CustomShroomsManager.DiscoveredShrooms) Broadcast(kvp.Value);
             foreach (var kvp in CustomPseudoManager.DiscoveredPseudoSeeds) Broadcast(kvp.Value);
@@ -325,6 +358,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 switch (data.drugType)
                 {
+                    case EDrugType.Marijuana: RebuildSeed(data); break;
                     case EDrugType.Cocaine: RebuildCoca(data); break;
                     case EDrugType.Shrooms: RebuildShroom(data); break;
                     case EDrugType.Methamphetamine: RebuildPseudo(data); break;
@@ -334,6 +368,26 @@ namespace UnicornsCustomSeeds.Managers
                 }
             }
             catch (Exception ex) { Utility.PrintException(ex); }
+        }
+
+        private static void RebuildSeed(UnicornSeedData data)
+        {
+            // RebuildFromPayload returns true both for "built it" and "already present",
+            // and CreateWeed_Server is RunLocally, so the host re-receives its own
+            // broadcast. Record up front whether this is genuinely new work.
+            bool alreadyPresent = Registry.ItemExists(data.seedId);
+
+            // Returns false only when the base WeedDefinition has not replicated yet.
+            // Park rather than drop: the host sends these immediately while mixes arrive
+            // on the queued vanilla replication, so a payload can land first.
+            if (!CustomSeedsManager.RebuildFromPayload(data))
+            {
+                DeferredSeedRebuildManager.Park(data);
+                return;
+            }
+
+            if (!alreadyPresent)
+                Utility.Log($"NetworkSyncManager: Rebuilt seed '{data.seedId}'.");
         }
 
         private static void RebuildCoca(UnicornSeedData data)

@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using MelonLoader;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -92,7 +92,8 @@ namespace UnicornsCustomSeeds.Patches
 
                     if (jArray.Count > 0 && jArray[0] is JObject first && !first.ContainsKey("variants"))
                     {
-                        Utility.Success($"Preparing to migrate {jArray.Count} legacy seed(s).");
+                        BackupLegacyFile(filePath);
+                        Utility.Success($"[MIGRATE] preparing to migrate {jArray.Count} legacy record(s).");
                         seeds = MigrateLegacySeedData(json, first);
                     }
                     else
@@ -146,6 +147,57 @@ namespace UnicornsCustomSeeds.Patches
                         Utility.Error($"PersistencePatches: Unknown EDrugType '{data.drugType}' for seed '{data.seedId}' — skipped.");
                         break;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Copies the legacy file aside before migration overwrites it. Once the rewrite
+        /// lands the original is gone, and it is the only thing that can reproduce a bad
+        /// migration from a bug report. Never overwrites an existing backup — the first
+        /// one taken is the genuine original.
+        /// </summary>
+        private static void BackupLegacyFile(string filePath)
+        {
+            try
+            {
+                string backup = filePath + ".legacy.bak";
+                if (File.Exists(backup)) return;
+
+                File.Copy(filePath, backup);
+                Utility.Log($"[MIGRATE] legacy file backed up to '{Path.GetFileName(backup)}'.");
+            }
+            catch (Exception ex)
+            {
+                Utility.Error("[MIGRATE] could not back up the legacy file — continuing with migration.");
+                Utility.PrintException(ex);
+            }
+        }
+
+        /// <summary>
+        /// Re-reads DiscoveredCustomSeeds.json and reports whether it is now in the new
+        /// format, using the same "has a variants key" test LoadDiscoveredSeeds uses to
+        /// detect legacy. So a true result means precisely: this will not migrate again.
+        /// </summary>
+        public static bool VerifyMigratedFile()
+        {
+            try
+            {
+                string saveFolder = Singleton<LoadManager>.Instance?.LoadedGameFolderPath;
+                if (string.IsNullOrEmpty(saveFolder)) return false;
+
+                string filePath = Path.Combine(saveFolder, "DiscoveredCustomSeeds.json");
+                if (!File.Exists(filePath)) return false;
+
+                JArray arr = JArray.Parse(File.ReadAllText(filePath));
+                if (arr.Count == 0) return true;   // nothing left to migrate
+
+                return arr[0] is JObject first && first.ContainsKey("variants");
+            }
+            catch (Exception ex)
+            {
+                Utility.Error("[MIGRATE] could not verify the rewritten file.");
+                Utility.PrintException(ex);
+                return false;
             }
         }
 

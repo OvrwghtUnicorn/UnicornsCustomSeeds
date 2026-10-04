@@ -75,13 +75,27 @@ namespace UnicornsCustomSeeds
             SaveManager.Instance.onSaveComplete.AddListener((UnityAction)SaveData);
         }
 
-        public void SaveData()
+        /// <summary>
+        /// onSaveComplete listener. Must stay void to satisfy UnityAction; callers that
+        /// need to know whether the write landed should use TrySaveData.
+        /// </summary>
+        public void SaveData() => TrySaveData();
+
+        /// <summary>
+        /// Returns true only if both files were written. A silent early return here used
+        /// to be indistinguishable from success, which made a failed migration rewrite
+        /// impossible to detect.
+        /// </summary>
+        public bool TrySaveData()
         {
             try
             {
                 string saveFolder = Singleton<LoadManager>.Instance.LoadedGameFolderPath;
                 if (string.IsNullOrEmpty(saveFolder) || !Directory.Exists(saveFolder))
-                    return;
+                {
+                    Utility.Error($"Core.TrySaveData: save folder unavailable ('{saveFolder}') — nothing written.");
+                    return false;
+                }
 
                 // ── DiscoveredCustomSeeds.json ────────────────────────────────────
                 {
@@ -104,8 +118,14 @@ namespace UnicornsCustomSeeds
                     string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
                     File.WriteAllText(Path.Combine(saveFolder, "UnicornsActiveCooking.json"), json);
                 }
+
+                return true;
             }
-            catch (Exception e) { Utility.PrintException(e); }
+            catch (Exception e)
+            {
+                Utility.PrintException(e);
+                return false;
+            }
         }
 
         public void InitMod()
@@ -130,12 +150,30 @@ namespace UnicornsCustomSeeds
                             || CustomShroomsManager.DiscoveredShrooms.Count > 0
                             || CustomCocaSeedsManager.DiscoveredCocaSeeds.Count > 0;
 
-                if (hasData)
-                    SaveData();
+                int converted = CustomSeedsManager.DiscoveredSeeds.Count
+                              + CustomShroomsManager.DiscoveredShrooms.Count
+                              + CustomCocaSeedsManager.DiscoveredCocaSeeds.Count
+                              + CustomPseudoManager.DiscoveredPseudoSeeds.Count;
+
+                if (!hasData)
+                {
+                    Utility.Error("[MIGRATE] flagged but nothing loaded — skipping the save so the existing file isn't overwritten with an empty list.");
+                }
+                else if (!TrySaveData())
+                {
+                    // letsMigrate deliberately left set: the legacy file is untouched, so
+                    // the next load detects it again and retries. Migration is idempotent.
+                    Utility.Error("[MIGRATE] rewrite FAILED — legacy file untouched, will retry on next load.");
+                }
+                else if (!LoadManager_StartGame_Patch.VerifyMigratedFile())
+                {
+                    Utility.Error("[MIGRATE] save reported success but the file on disk is still legacy — will retry on next load.");
+                }
                 else
-                    Utility.Error("Core: migration was flagged but nothing loaded — skipping the save so the existing file isn't overwritten with an empty list.");
-                Utility.Success($"Successfully migrated {CustomSeedsManager.DiscoveredSeeds.Count} seed(s)");
-                CustomSeedsManager.letsMigrate = false;
+                {
+                    Utility.Success($"[MIGRATE] {converted} record(s) converted and rewritten in the new format.");
+                    CustomSeedsManager.letsMigrate = false;
+                }
             }
 
             // Custom recipes are injected into ChemistryStationInterface during the

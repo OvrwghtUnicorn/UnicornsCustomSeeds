@@ -17,7 +17,7 @@ namespace UnicornsCustomSeeds.Patches
     public class ProductManagerAppPatches
     {
         private static List<GameObject> pendingIndicators = new List<GameObject>();
-        private static bool isPrefabInitialized = false;
+        private static GameObject tempParent;
 
         [HarmonyPatch(typeof(ProductManagerApp))]
         public static class ProductManagerApp_Patch
@@ -29,16 +29,20 @@ namespace UnicornsCustomSeeds.Patches
                 if (__instance == null || __instance.EntryPrefab == null)
                     return true;
 
+                // This instance already points at a modified prefab.
                 if (__instance.EntryPrefab.transform.Find("SeedIndicator") != null)
-                {
-                    isPrefabInitialized = true;
                     return true;
-                }
 
-                if (!isPrefabInitialized)
                 {
+                    // Each app instance starts with the original prefab, so build a fresh clone
+                    // for it and replace the one left over from a previous session. Unity's
+                    // null check also covers a Temp that was destroyed with its scene.
+                    if (tempParent != null)
+                        UnityEngine.Object.Destroy(tempParent);
+
                     var parent = new GameObject("Temp");
                     parent.SetActive(false);
+                    tempParent = parent;
                     var newPrefab = UnityEngine.Object.Instantiate<GameObject>(__instance.EntryPrefab, parent.transform);
                     ProductEntry entry = __instance.EntryPrefab.GetComponent<ProductEntry>();
                     var favouriteButton = UnityEngine.Object.Instantiate<GameObject>(entry.FavouriteButton.gameObject, newPrefab.transform);
@@ -57,7 +61,6 @@ namespace UnicornsCustomSeeds.Patches
                     TrySetSeedIconSprite(favouriteButton);
 
                     __instance.EntryPrefab = newPrefab;
-                    isPrefabInitialized = true;
                 }
 
                 return true;
@@ -86,17 +89,63 @@ namespace UnicornsCustomSeeds.Patches
                         // Ensure the sprite is set (handles cases where prefab wasn't updated)
                         TrySetSeedIconSprite(seedIndicator.gameObject);
 
-                        if (CustomSeedsManager.DiscoveredSeeds.ContainsKey(definition.ID))
-                        {
-                            seedIndicator.gameObject.SetActive(true);
-                        }
-                        else
-                        {
-                            seedIndicator.gameObject.SetActive(false);
-                        }
+                        seedIndicator.gameObject.SetActive(IsCustomMix(definition.ID));
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Entries are built when a product is discovered, which is always BEFORE its seed is
+        /// synthesized, so the Initialize postfix above sees the mix as "not custom" and hides the
+        /// indicator. ProductManagerApp.SetOpen(true) is the point where the player can next see
+        /// it, so re-evaluate every entry there. This covers all four drug types and every
+        /// creation path (host, client rebuild, save load) without touching those call sites.
+        /// </summary>
+        [HarmonyPatch(typeof(ProductManagerApp), nameof(ProductManagerApp.SetOpen))]
+        public static class ProductManagerApp_SetOpen_Patch
+        {
+            [HarmonyPostfix]
+            public static void Postfix(ProductManagerApp __instance, bool open)
+            {
+                if (!open || __instance == null) return;
+
+                try
+                {
+                    if (__instance.entries != null)
+                    {
+                        for (int i = 0; i < __instance.entries.Count; i++)
+                            RefreshIndicator(__instance.entries[i]);
+                    }
+
+                    if (__instance.favouriteEntries != null)
+                    {
+                        for (int i = 0; i < __instance.favouriteEntries.Count; i++)
+                            RefreshIndicator(__instance.favouriteEntries[i]);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Utility.PrintException(e);
+                }
+            }
+        }
+
+        private static bool IsCustomMix(string id)
+        {
+            return CustomSeedsManager.DiscoveredSeeds.ContainsKey(id)
+                || CustomShroomsManager.DiscoveredShrooms.ContainsKey(id)
+                || CustomCocaSeedsManager.DiscoveredCocaSeeds.ContainsKey(id)
+                || CustomPseudoManager.DiscoveredPseudoSeeds.ContainsKey(id);
+        }
+
+        private static void RefreshIndicator(ProductEntry entry)
+        {
+            if (entry == null || entry.Definition == null) return;
+
+            Transform seedIndicator = entry.transform.Find("SeedIndicator");
+            if (seedIndicator != null)
+                seedIndicator.gameObject.SetActive(IsCustomMix(entry.Definition.ID));
         }
 
         private static void TrySetSeedIconSprite(GameObject indicatorObject)
@@ -169,7 +218,6 @@ namespace UnicornsCustomSeeds.Patches
         public static void ClearPendingIndicators()
         {
             pendingIndicators.Clear();
-            isPrefabInitialized = false;
         }
     }
 }

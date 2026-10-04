@@ -1,7 +1,8 @@
-﻿
+
 using UnityEngine;
 using MelonLoader;
 using UnicornsCustomSeeds.Managers;
+using UnicornsCustomSeeds.TemplateUtils;
 #if IL2CPP
 using Il2CppScheduleOne.Product;
 #elif MONO
@@ -37,29 +38,36 @@ namespace UnicornsCustomSeeds.Seeds
         {
             if (rend == null) return;
 
-            // Get bounds from mesh filter
             var meshFilter = GetComponent<MeshFilter>();
-            if (meshFilter != null)
+            if (meshFilter == null) return;
+
+            // The factory renames this object to "<original>:<itemId>" on the line after
+            // it adds this component, so the suffix is always present.
+            string id = name.Split(':')[1];
+
+            if (SeedVisualsManager.TryGetLabelColors(id, out Color main, out Color secondary))
             {
-                string id = name.Split(':')[1];
-                
-                WeedAppearanceSettings appearance;
-                SeedVisualsManager.appearanceMap.TryGetValue(id,out appearance);
-                if (appearance != null) {
-                    colorA = appearance.MainColor;
-                    colorB = appearance.SecondaryColor;
-                }
-                var localBounds = meshFilter.sharedMesh.bounds;
-
-                rend.GetPropertyBlock(block); // Get current properties
-
-                block.SetColor("_ColorA", colorA);
-                block.SetColor("_ColorB", colorB);
-                block.SetFloat("_MinZ", localBounds.min.z);
-                block.SetFloat("_MaxZ", localBounds.max.z);
-
-                rend.SetPropertyBlock(block);
+                colorA = main;
+                colorB = secondary;
             }
+            else if (!useRandomColors)
+            {
+                // Writing the block now would push the default Color — transparent black —
+                // into the shader. Leaving the material's own colours is the better failure.
+                Utility.Error($"SeedVialLabel: no appearance registered for '{id}' — leaving the label uncoloured.");
+                return;
+            }
+
+            var localBounds = meshFilter.sharedMesh.bounds;
+
+            rend.GetPropertyBlock(block);
+
+            block.SetColor("_ColorA", colorA);
+            block.SetColor("_ColorB", colorB);
+            block.SetFloat("_MinZ", localBounds.min.z);
+            block.SetFloat("_MaxZ", localBounds.max.z);
+
+            rend.SetPropertyBlock(block);
         }
     }
 }
