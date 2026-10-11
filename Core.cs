@@ -45,7 +45,7 @@ namespace UnicornsCustomSeeds
         public const string Description = "Your good buddy Unicorn can help you synthesize seeds";
         public const string Author = "OverweightUnicorn";
         public const string Company = "UnicornsCanMod";
-        public const string Version = "1.1.2";
+        public const string Version = "2.0.0";
         public const string DownloadLink = null;
     }
 

@@ -150,7 +150,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static IEnumerator CreateSyringe(ShroomDefinition shroomDef)
         {
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
 
             if (factory == null)
             {

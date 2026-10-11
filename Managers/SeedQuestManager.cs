@@ -26,7 +26,7 @@ namespace UnicornsCustomSeeds.Managers
     {
         public static CustomSynthesisQuest seedDropoff;
 
-        public static string sendableMessageId = "Synthesize Seeds";
+        public static string sendableMessageId = "Synthesize Weed";
         public static bool IsWaitingForDropoff = false;
         public static bool HasActiveQuest => IsWaitingForDropoff;
 

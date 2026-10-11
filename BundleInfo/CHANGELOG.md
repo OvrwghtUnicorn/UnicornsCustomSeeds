@@ -1,3 +1,14 @@
+# Version 2.0.0
+- Custom seeds are no longer weed only: synthesize custom shroom syringes, coca seeds and pseudo (meth) from your discovered mixes
+- New supplier hooks for each drug: Albert (weed), Phil (shrooms), Salvador (coca) and Shirley (pseudo)
+- Custom seed quests load and save for the new drug types
+- Added a custom icon for coca seeds
+- Cooking in progress (cauldron and chemistry stations) now survives saving and loading
+- Multiplayer: custom items, quests and cooking state now sync to joining clients for all drug types
+- Multiplayer: fixed several bugs where items arrived before their definitions and were lost on clients
+- Save file structure changed to store the drug type with each mix. Existing 1.x saves are migrated automatically
+- Logging is silent unless DebugLogging is enabled
+
 # Version 1.1.2
 - Updated AssetBundle loader to cache the bundle to prevent bundles not loading on game boot
 - [Lumahex](https://www.nexusmods.com/profile/Lumahex/mods) updated the mod to work with version 0.4.6f13

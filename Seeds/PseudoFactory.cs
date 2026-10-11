@@ -208,7 +208,7 @@ namespace UnicornsCustomSeeds.Seeds
             {
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                    SeedVisualsManager.baseLiquidMethSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                    SeedVisualsManager.baseLiquidMethSprite, top, bottom);
                 if (newIcon == null) return;
 
                 newIcon.name = clone.name + "_icon";
@@ -308,7 +308,7 @@ namespace UnicornsCustomSeeds.Seeds
             {
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                    SeedVisualsManager.basePseudoSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                    SeedVisualsManager.basePseudoSprite, top, bottom);
                 if (newIcon != null)
                     newIcon.name = $"{methDef.ID}_pseudo_icon";
                 return newIcon;

@@ -8,13 +8,19 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		IL2CPP|Any CPU = IL2CPP|Any CPU
+		IL2CPP|x64 = IL2CPP|x64
 		MONO|Any CPU = MONO|Any CPU
+		MONO|x64 = MONO|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.IL2CPP|Any CPU.ActiveCfg = IL2CPP|Any CPU
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.IL2CPP|Any CPU.Build.0 = IL2CPP|Any CPU
+		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.IL2CPP|x64.ActiveCfg = IL2CPP|x64
+		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.IL2CPP|x64.Build.0 = IL2CPP|x64
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|Any CPU.ActiveCfg = MONO|Any CPU
 		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|Any CPU.Build.0 = MONO|Any CPU
+		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|x64.ActiveCfg = MONO|x64
+		{BB6DFBB6-9AED-6D5B-5F7E-83CD1FD99640}.MONO|x64.Build.0 = MONO|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

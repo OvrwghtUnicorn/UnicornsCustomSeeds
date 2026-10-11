@@ -5,13 +5,14 @@
 		<RootNamespace>UnicornsCustomSeeds</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.1.2</AssemblyVersion>
-		<FileVersion>1.1.2</FileVersion>
+		<AssemblyVersion>2.0.0</AssemblyVersion>
+		<FileVersion>2.0.0</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Configurations>MONO;IL2CPP</Configurations>
 		<ReleaseDir>Q:\code\UnityModding\Schedule_1_Modding\UnicornsCustomSeeds\BundleInfo</ReleaseDir>
+		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'MONO'">

@@ -188,8 +188,7 @@ namespace UnicornsCustomSeeds.Seeds
                 Utility.Log($"[COKE] Main Color: {appearance.MainColor}, Secondary Color: {appearance.SecondaryColor}");
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                    SeedVisualsManager.baseCocaSeedSprite, top, bottom,
-                    SeedVisualsManager.FillKeyColor);
+                    SeedVisualsManager.baseCocaSeedSprite, top, bottom);
                 newIcon.name = newSeed.name + "_icon";
                 SeedVisualsManager.seedIcons[newSeed.ID] = newIcon;
                 newSeed.Icon = newIcon;
@@ -215,7 +214,7 @@ namespace UnicornsCustomSeeds.Seeds
             {
                 (Color top, Color bottom) = SeedVisualsManager.BoostContrastIfSimilar(appearance.MainColor, appearance.SecondaryColor);
                 Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                    baseIcon, top, bottom, SeedVisualsManager.FillKeyColor);
+                    baseIcon, top, bottom);
                 if (newIcon == null) return;
 
                 newIcon.name = clone.name + "_icon";

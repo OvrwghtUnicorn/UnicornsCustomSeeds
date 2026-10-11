@@ -94,7 +94,7 @@ namespace UnicornsCustomSeeds.Seeds
                 try
                 {
                     Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                        SeedVisualsManager.baseSyringeSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                        SeedVisualsManager.baseSyringeSprite, top, bottom);
                     if (newIcon != null)
                     {
                         newIcon.name = syringe.name + "_icon";
@@ -114,7 +114,7 @@ namespace UnicornsCustomSeeds.Seeds
                 try
                 {
                     Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                        SeedVisualsManager.baseShroomSpawnSprite, top, bottom, SeedVisualsManager.FillKeyColor);
+                        SeedVisualsManager.baseShroomSpawnSprite, top, bottom);
                     if (newIcon != null)
                     {
                         newIcon.name = spawnDef.name + "_icon";

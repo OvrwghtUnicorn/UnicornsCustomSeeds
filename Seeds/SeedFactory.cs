@@ -337,7 +337,7 @@ namespace UnicornsCustomSeeds.Seeds
                 try
                 {
                     Sprite newIcon = SeedVisualsManager.GenerateIconWithKeyColorFill(
-                        SeedVisualsManager.baseSeedSprite, weedAppearance.MainColor, weedAppearance.SecondaryColor, SeedVisualsManager.FillKeyColor);
+                        SeedVisualsManager.baseSeedSprite, weedAppearance.MainColor, weedAppearance.SecondaryColor);
                     newIcon.name = newSeedDef.name + "_icon";
                     SeedVisualsManager.seedIcons.Add(newSeedDef.ID, newIcon);
                     newSeedDef.Icon = newIcon;

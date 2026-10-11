@@ -115,7 +115,7 @@ namespace UnicornsCustomSeeds.Managers
 
         public static IEnumerator CreatePseudoChain(MethDefinition methDef, EQuality quality)
         {
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(StashManager.SynthesizeTime.Value);
 
             if (factory == null)
             {
