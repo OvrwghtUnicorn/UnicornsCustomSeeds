@@ -416,8 +416,7 @@ namespace UnicornsCustomSeeds.Managers
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
 
-            try { Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed); }
-            catch (Exception ex) { Utility.PrintException(ex); }
+            CustomSeedsManager.RegisterWithManagement(newSeed);
 
             CustomSeedsManager.AddSeedToPots(newSeed);
             CustomCocaSeedsManager.CreateShopListing(newSeed, data.price);

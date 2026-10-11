@@ -46,7 +46,7 @@ namespace UnicornsCustomSeeds.Patches
             var seedListClean = new GenericCol.List<SeedDefinition>();
             foreach (var seed in seedList)
             {
-                if (seed != null && !seed.ID.Contains("customseeddefinition"))
+                if (seed != null && !CustomSeedsManager.IsCustomSeedId(seed.ID))
                     seedListClean.Add(seed);
             }
             Singleton<ManagementUtilities>.Instance.Seeds = seedListClean;
@@ -295,16 +295,21 @@ namespace UnicornsCustomSeeds.Patches
             NetworkConnection conn, string name, string id,
      EDrugType type, List<string> properties, WeedAppearanceSettings appearance)
         {
-            if (Registry.ItemExists(id + "_customseeddefinition")) return;
+            // Already built (e.g. by the Initialize sweep or a broadcast): still make sure
+            // employees can see it, then stop.
+            string seedId = id + "_customseeddefinition";
+            if (Registry.ItemExists(seedId))
+            {
+                var existing = Registry.GetItem<SeedDefinition>(seedId);
+                CustomSeedsManager.RegisterWithManagement(existing);
+                return;
+            }
 
             if (CustomSeedsManager.DiscoveredSeeds.TryGetValue(id, out var parts))
             {
                 SeedDefinition newSeed = CustomSeedsManager.SeedDefinitionLoader(parts);
                 if (newSeed != null)
-                {
-                    try { Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed); }
-                    catch (Exception ex) { Utility.PrintException(ex); }
-                }
+                    CustomSeedsManager.RegisterWithManagement(newSeed);
             }
         }
     }
@@ -347,8 +352,7 @@ namespace UnicornsCustomSeeds.Patches
 
                 Singleton<Registry>.Instance.AddToRegistry(newSeed);
 
-                try { Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed); }
-                catch (Exception ex) { Utility.PrintException(ex); }
+                CustomSeedsManager.RegisterWithManagement(newSeed);
 
                 // AddLeafToCauldrons must be called after the leaf is registered so all
                 // cauldrons in the scene accept the custom leaf in their ingredient slot filters.

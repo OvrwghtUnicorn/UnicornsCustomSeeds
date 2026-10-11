@@ -128,8 +128,28 @@ namespace UnicornsCustomSeeds.Managers
             foreach (var seed in DiscoveredSeeds)
             {
                 SeedDefinition customDef = Registry.GetItem<SeedDefinition>(seed.Value.seedId);
+
+                // The CreateWeed postfix only rebuilds seeds whose mix is replayed on load, so
+                // a seed made from a vanilla strain is still missing here. Rebuild it, as the
+                // shroom and coca managers do.
+                if (customDef == null)
+                {
+                    if (factory == null)
+                    {
+                        Utility.Error($"CustomSeedsManager.Initialize: factory is null — cannot rebuild '{seed.Value.seedId}'.");
+                    }
+                    else
+                    {
+                        try { customDef = SeedDefinitionLoader(seed.Value); }
+                        catch (Exception ex) { Utility.PrintException(ex); }
+                    }
+                }
+
                 if (customDef != null)
                 {
+                    RegisterWithManagement(customDef);
+                    AddSeedToPots(customDef);
+
                     if (letsMigrate)
                     {
                         WeedDefinition weedDef = Registry.GetItem<WeedDefinition>(seed.Value.mixId);
@@ -269,6 +289,7 @@ namespace UnicornsCustomSeeds.Managers
             newSeedData.SetSingleVariant(BASE_SEED_ID, newSeed.ID, price);
             DiscoveredSeeds.Add(newSeedData.mixId, newSeedData);
             CreateShopListing(newSeed, price);
+            RegisterWithManagement(newSeed);
             AddSeedToPots(newSeed);
             EnableSeedIndicator(newSeedData.mixId);
 
@@ -433,8 +454,71 @@ namespace UnicornsCustomSeeds.Managers
 #elif MONO
                 if (pot.Configuration is PotConfiguration config) {
 #endif
-                    config.Seed.Options.Add(newSeed);
+                    // Idempotent: the seed can be pushed from several paths (create, broadcast
+                    // echo, load sweep) and a duplicate would show twice in the pot menu.
+                    bool alreadyListed = false;
+                    var options = config.Seed.Options;
+                    for (int i = 0; i < options.Count; i++)
+                    {
+                        if (options[i] != null && options[i].ID == newSeed.ID)
+                        {
+                            alreadyListed = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyListed)
+                        options.Add(newSeed);
                 }
+            }
+        }
+
+        /// <summary>
+        /// True for IDs of seeds this mod created (weed and coca). Used to strip them from
+        /// ManagementUtilities.Seeds on exit to menu and to skip them in vanilla lookups.
+        /// </summary>
+        public static bool IsCustomSeedId(string id)
+        {
+            return !string.IsNullOrEmpty(id)
+                && (id.Contains("customseeddefinition") || id.Contains("customcocaseed"));
+        }
+
+        /// <summary>
+        /// Makes a seed visible to botanists. With a pot's seed field on "Any",
+        /// PotConfiguration.GetSelectedSeedIDs() reads ManagementUtilities.Seeds, so a seed
+        /// that is only in the Registry is invisible to employees.
+        ///
+        /// Idempotent: an entry with the same ID is left alone, or replaced when it is a
+        /// stale object from an earlier save.
+        /// </summary>
+        public static void RegisterWithManagement(SeedDefinition seed)
+        {
+            if (seed == null) return;
+
+            try
+            {
+                var utilities = Singleton<ManagementUtilities>.Instance;
+                if (utilities == null || utilities.Seeds == null) return;
+
+                var list = utilities.Seeds;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var entry = list[i];
+                    if (entry == null || entry.ID != seed.ID) continue;
+
+                    if (entry != seed)
+                    {
+                        list[i] = seed;
+                        Utility.Log($"RegisterWithManagement: replaced stale '{seed.ID}'.");
+                    }
+                    return;
+                }
+
+                list.Add(seed);
+                Utility.Log($"RegisterWithManagement: added '{seed.ID}'.");
+            }
+            catch (Exception ex)
+            {
+                Utility.PrintException(ex);
             }
         }
 
@@ -484,7 +568,15 @@ namespace UnicornsCustomSeeds.Managers
         public static bool RebuildFromPayload(UnicornSeedData seedData)
         {
             if (seedData == null) return true;
-            if (Registry.ItemExists(seedData.seedId)) return true;   // already built
+            if (Registry.ItemExists(seedData.seedId))
+            {
+                // Already built — on the host this is its own broadcast coming back, and
+                // CreateSeed never registered the seed with ManagementUtilities, so do it here.
+                var existing = Registry.GetItem<SeedDefinition>(seedData.seedId);
+                RegisterWithManagement(existing);
+                AddSeedToPots(existing);
+                return true;
+            }
 
             if (!DiscoveredSeeds.ContainsKey(seedData.mixId))
                 DiscoveredSeeds.Add(seedData.mixId, seedData);
@@ -499,7 +591,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 // Use the price the server already computed and serialized. Recomputing it
                 // here is wrong on a joining client: the mix's Recipes have not synced yet.
-                Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+                RegisterWithManagement(newSeed);
                 CreateShopListing(newSeed, seedData.price);
                 AddSeedToPots(newSeed);
                 EnableSeedIndicator(seedData.mixId);

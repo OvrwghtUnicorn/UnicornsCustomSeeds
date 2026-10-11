@@ -147,7 +147,7 @@ namespace UnicornsCustomSeeds.Managers
 
             Singleton<Registry>.Instance.AddToRegistry(newSeed);
 
-            Singleton<ManagementUtilities>.Instance.Seeds.Add(newSeed);
+            CustomSeedsManager.RegisterWithManagement(newSeed);
             CustomSeedsManager.AddSeedToPots(newSeed);
 
             // Add the custom leaf ID to all cauldron ingredient slot filters
@@ -285,6 +285,11 @@ namespace UnicornsCustomSeeds.Managers
                     }
 
                     Singleton<Registry>.Instance.AddToRegistry(newSeed);
+
+                    // This rebuild path used to stop at the Registry, leaving the seed invisible
+                    // to botanists (pot "Any" reads ManagementUtilities.Seeds).
+                    CustomSeedsManager.RegisterWithManagement(newSeed);
+                    CustomSeedsManager.AddSeedToPots(newSeed);
 #if IL2CPP
                     CreateShopListing((Il2CppScheduleOne.Growing.SeedDefinition)(object)newSeed, kvp.Value.price);
 #elif MONO

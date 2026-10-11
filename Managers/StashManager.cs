@@ -373,7 +373,7 @@ namespace UnicornsCustomSeeds.Managers
             {
                 if (seed == null || seed.PlantPrefab == null)
                     continue;
-                if (seed.ID != null && seed.ID.Contains("customseeddefinition"))
+                if (CustomSeedsManager.IsCustomSeedId(seed.ID))
                     continue;
 
                 foreach (PlantHarvestable harvestable in seed.PlantPrefab.GetComponentsInChildren<PlantHarvestable>(true))
