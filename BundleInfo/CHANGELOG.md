@@ -2,12 +2,19 @@
 - Custom seeds are no longer weed only: synthesize custom shroom syringes, coca seeds and pseudo (meth) from your discovered mixes
 - New supplier hooks for each drug: Albert (weed), Phil (shrooms), Salvador (coca) and Shirley (pseudo)
 - Custom seed quests load and save for the new drug types
+- Albert's chat option is now "Synthesize Weed" to match the other suppliers
+- Supplier stashes show a status line while open: units and cash against the requirement, plus warnings for a wrong drug type, more than one mix, a base strain, or a mix that has already been synthesized
+- Packaged product counts correctly in every stash (baggie 1, jar 5, brick 20) and the right number of packages is taken
+- Fixed supplier stashes sometimes not reacting when closed after loading a save
+- Botanists can use custom seeds when a pot's seed is set to "Any", and custom seeds no longer show twice in the pot menu
+- Custom seed prices are calculated from the mix's additives plus the base strain's seed price
 - Added a custom icon for coca seeds
+- Custom icon generation
 - Cooking in progress (cauldron and chemistry stations) now survives saving and loading
 - Multiplayer: custom items, quests and cooking state now sync to joining clients for all drug types
 - Multiplayer: fixed several bugs where items arrived before their definitions and were lost on clients
 - Save file structure changed to store the drug type with each mix. Existing 1.x saves are migrated automatically
-- Logging is silent unless DebugLogging is enabled
+- Added DebugLogging as a MelonPreferences setting for verbose logging to assist with debugging errors and bugs
 
 # Version 1.1.2
 - Updated AssetBundle loader to cache the bundle to prevent bundles not loading on game boot
