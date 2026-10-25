@@ -96,7 +96,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-		<PackageReference Include="S1API.Forked" Version="3.2.0" />
+		<PackageReference Include="S1API.Forked" Version="3.2.1" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->
