@@ -27,7 +27,6 @@ using ScheduleOne.Growing;
 using ScheduleOne.ItemFramework;
 using ScheduleOne.ObjectScripts;
 using ScheduleOne.Persistence;
-using ScheduleOne.ObjectScripts;
 using ScheduleOne.Product;
 using ScheduleOne.StationFramework;
 using ScheduleOne.UI.Stations;
