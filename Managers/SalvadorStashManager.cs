@@ -41,6 +41,7 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("Salvador's stash ready.");
                     salvadorsStash = stash;
                     stash.Storage.onClosed += (Action)SalvadorsStashClosed;
+                    StashInfoUI.OnStashFound(stash, EDrugType.Cocaine);
                     break;
                 }
             }
@@ -87,7 +88,8 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cashInstance == null || cocaineInstance == null) return;
 
-            int qty = cocaineInstance.Quantity;
+            int unitsPerPackage = StashManager.GetUnitsPerPackage(cocaineInstance);
+            int qty = StashManager.GetTotalUnits(cocaineInstance);
             if (cashInstance.Balance < StashManager.StashCostEntry.Value || qty < StashManager.StashQtyEntry.Value) return;
 
 #if IL2CPP
@@ -99,7 +101,7 @@ namespace UnicornsCustomSeeds.Managers
             if (definition == null) return;
             if (CustomCocaSeedsManager.DiscoveredCocaSeeds.ContainsKey(definition.ID)) return;
 
-            cocaineSlot.ChangeQuantity(-StashManager.StashQtyEntry.Value);
+            cocaineSlot.ChangeQuantity(-StashManager.PackagesToConsume(StashManager.StashQtyEntry.Value, unitsPerPackage));
             cashInstance.ChangeBalance(-StashManager.StashCostEntry.Value);
 
             CocaQuestManager.CompleteQuest();

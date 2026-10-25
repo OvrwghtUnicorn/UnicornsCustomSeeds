@@ -80,6 +80,7 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("Alberts Ready to Synthesize");
                     albertsStash = stash;
                     stash.Storage.onClosed += (Action)AlbertsStashClosed;
+                    StashInfoUI.OnStashFound(stash, EDrugType.Marijuana);
                     break;
                 }
             }
@@ -165,11 +166,8 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cashInstance != null && weedInstance != null)
             {
-                string packaging = weedInstance.AppliedPackaging?.Name;
-                int quantity = weedInstance.Quantity;
-                uint packageAmount = PackageAmount(packaging);
-                if (packageAmount <= 0) return;
-                uint total = (uint)(quantity * packageAmount);
+                int unitsPerPackage = GetUnitsPerPackage(weedInstance);
+                int total = GetTotalUnits(weedInstance);
                 if (cashInstance.Balance >= StashCostEntry.Value && total >= StashQtyEntry.Value)
                 {
 #if IL2CPP
@@ -181,7 +179,7 @@ namespace UnicornsCustomSeeds.Managers
                     {
                         if (SeedQuestManager.HasActiveQuest)
                         {
-                            weedSlot.ChangeQuantity(-(StashQtyEntry.Value / (int)packageAmount));
+                            weedSlot.ChangeQuantity(-PackagesToConsume(StashQtyEntry.Value, unitsPerPackage));
                             cashInstance.ChangeBalance(-StashCostEntry.Value);
                             SeedQuestManager.CompleteQuest();
                             SeedQuestManager.SendMessage("I will begin synthesizing the seed");
@@ -192,16 +190,32 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
-        private static uint PackageAmount(string packaging)
+        /// <summary>
+        /// Units in one package of this stack (Baggie 1, Jar 5, Brick 20), read from the game's
+        /// own PackagingDefinition. Loose or unrecognised items count as 1.
+        /// Shared by all four supplier stashes so a jar or brick counts the same everywhere.
+        /// </summary>
+        public static int GetUnitsPerPackage(ProductItemInstance instance)
         {
-            // Return the amount based on the packaging type - UPDATABLE
-            return packaging switch
-            {
-                "Brick" => 20,
-                "Jar" => 5,
-                "Baggie" => 1,
-                _ => 1, // Fallback for loose items
-            };
+            int units = instance?.AppliedPackaging?.Quantity ?? 1;
+            return units < 1 ? 1 : units;
+        }
+
+        /// <summary>Total units in a stack: package count times units per package.</summary>
+        public static int GetTotalUnits(ProductItemInstance instance)
+        {
+            return instance.Quantity * GetUnitsPerPackage(instance);
+        }
+
+        /// <summary>
+        /// Packages to take out to cover requiredUnits, rounded up. Rounding down would
+        /// charge less than the requirement the stash just checked (22 units from 5-unit
+        /// jars is 5 jars, not 4).
+        /// </summary>
+        public static int PackagesToConsume(int requiredUnits, int unitsPerPackage)
+        {
+            if (unitsPerPackage < 1) unitsPerPackage = 1;
+            return (requiredUnits + unitsPerPackage - 1) / unitsPerPackage;
         }
 
         public static WeedDefinition GetBaseStrain(ProductDefinition product)

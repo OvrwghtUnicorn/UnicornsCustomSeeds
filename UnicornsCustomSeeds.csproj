@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>disable</Nullable>
@@ -56,6 +56,7 @@
 		<Compile Include="Managers\SalvadorStashManager.cs" />
 		<Compile Include="Managers\ShirleyStashManager.cs" />
 		<Compile Include="Managers\ShroomQuestManager.cs" />
+		<Compile Include="Managers\StashInfoUI.cs" />
 		<Compile Include="Patches\CauldronPatches.cs" />
 		<Compile Include="Patches\ItemStreamGuard.cs" />
 		<Compile Include="Patches\DeferredSlotPatches.cs" />
@@ -67,6 +68,7 @@
 		<Compile Include="Managers\SeedVisualsManager.cs" />
 		<Compile Include="Patches\AddRecipePatch.cs" />
 		<Compile Include="Patches\SendableMessagePatch.cs" />
+		<Compile Include="Patches\StashInfoPatches.cs" />
 		<Compile Include="SeedQuests\CustomSynthesisQuest.cs" />
 		<Compile Include="SeedQuests\CustomSynthesisQuestData.cs" />
 		<Compile Include="SeedQuests\SynthesisQuestVariants.cs" />

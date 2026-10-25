@@ -41,6 +41,7 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("Shirley's stash ready.");
                     shirleysStash = stash;
                     stash.Storage.onClosed += (Action)ShirleysStashClosed;
+                    StashInfoUI.OnStashFound(stash, EDrugType.Methamphetamine);
                     break;
                 }
             }
@@ -87,7 +88,8 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cashInstance == null || methInstance == null) return;
 
-            int qty = methInstance.Quantity;
+            int unitsPerPackage = StashManager.GetUnitsPerPackage(methInstance);
+            int qty = StashManager.GetTotalUnits(methInstance);
             if (cashInstance.Balance < StashManager.StashCostEntry.Value || qty < StashManager.StashQtyEntry.Value) return;
 
 #if IL2CPP
@@ -99,7 +101,7 @@ namespace UnicornsCustomSeeds.Managers
             if (definition == null) return;
             if (CustomPseudoManager.DiscoveredPseudoSeeds.ContainsKey(definition.ID)) return;
 
-            methSlot.ChangeQuantity(-StashManager.StashQtyEntry.Value);
+            methSlot.ChangeQuantity(-StashManager.PackagesToConsume(StashManager.StashQtyEntry.Value, unitsPerPackage));
             cashInstance.ChangeBalance(-StashManager.StashCostEntry.Value);
 
             PseudoQuestManager.CompleteQuest();

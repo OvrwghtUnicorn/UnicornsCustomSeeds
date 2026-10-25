@@ -41,6 +41,7 @@ namespace UnicornsCustomSeeds.Managers
                     Utility.Log("Phil's stash ready.");
                     philsStash = stash;
                     stash.Storage.onClosed += (Action)PhilsStashClosed;
+                    StashInfoUI.OnStashFound(stash, EDrugType.Shrooms);
                     break;
                 }
             }
@@ -87,7 +88,8 @@ namespace UnicornsCustomSeeds.Managers
 
             if (cashInstance == null || shroomInstance == null) return;
 
-            int qty = shroomInstance.Quantity;
+            int unitsPerPackage = StashManager.GetUnitsPerPackage(shroomInstance);
+            int qty = StashManager.GetTotalUnits(shroomInstance);
             if (cashInstance.Balance < StashManager.StashCostEntry.Value || qty < StashManager.StashQtyEntry.Value) return;
 
 #if IL2CPP
@@ -99,7 +101,7 @@ namespace UnicornsCustomSeeds.Managers
             if (definition == null) return;
             if (CustomShroomsManager.DiscoveredShrooms.ContainsKey(definition.ID)) return;
 
-            shroomSlot.ChangeQuantity(-StashManager.StashQtyEntry.Value);
+            shroomSlot.ChangeQuantity(-StashManager.PackagesToConsume(StashManager.StashQtyEntry.Value, unitsPerPackage));
             cashInstance.ChangeBalance(-StashManager.StashCostEntry.Value);
 
             ShroomQuestManager.CompleteQuest();
