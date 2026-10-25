@@ -54,18 +54,8 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void OnSent()
         {
-            // Diagnostic bracketing: the shroom quest was appearing on the client but
-            // not the host. onSent fires on BOTH machines (SendableMessage.Send routes
-            // through MessagingManager, and every machine re-runs Send(network:false)),
-            // so the host must reach the create path here. Remove once confirmed.
-            Utility.Log($"[ShroomQuestManager.OnSent] fired. IsServer={InstanceFinder.IsServer}, IsClientOnly={InstanceFinder.IsClientOnly}, shroomDropoff={(shroomDropoff == null ? "null" : "set")}");
-
             if (!InstanceFinder.IsServer) return;
-            if (Time.time - lastSentTime < 1f)
-            {
-                Utility.Log("[ShroomQuestManager.OnSent] skipped: debounce (<1s since last send).");
-                return;
-            }
+            if (Time.time - lastSentTime < 1f) return;
             lastSentTime = Time.time;
 
             List<string> messages = new List<string> { "Drop the shroom mix and cash in my drop box." };
@@ -75,15 +65,11 @@ namespace UnicornsCustomSeeds.Managers
 
             if (shroomDropoff == null)
             {
-                Utility.Log("[ShroomQuestManager.OnSent] broadcasting + creating quest on host...");
                 NetworkSyncManager.BroadcastQuestConfig(EDrugType.Shrooms);
                 shroomDropoff = S1API.Quests.QuestManager.CreateQuest<ShroomSynthesisQuest>() as CustomSynthesisQuest;
                 shroomDropoff?.SetDrugType(EDrugType.Shrooms);
-                Utility.Log($"[ShroomQuestManager.OnSent] host create done, shroomDropoff={(shroomDropoff == null ? "NULL — CreateQuest failed" : "ok")}");
-            }
-            else
-            {
-                Utility.Log("[ShroomQuestManager.OnSent] skipped create: shroomDropoff already set.");
+                if (shroomDropoff == null)
+                    Utility.Error("[ShroomQuestManager.OnSent] CreateQuest failed on host.");
             }
         }
 

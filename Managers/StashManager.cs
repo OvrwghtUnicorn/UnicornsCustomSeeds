@@ -48,7 +48,7 @@ namespace UnicornsCustomSeeds.Managers
             ConfigCategory = MelonPreferences.CreateCategory("Unicorns Custom Seeds");
             StashCostEntry = ConfigCategory.CreateEntry("StashCostRequirement", 500, "Stash Cost Requirement", "The price that Albert charges to synthesize seeds");
             StashQtyEntry = ConfigCategory.CreateEntry("StashQtyRequirement", 20, "Stash Quantity Requirement", "The quantity of weed that needs to be provided of a certain mix");
-            SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in secondsd that it will take for Albert to synthesize a seed");
+            SynthesizeTime = ConfigCategory.CreateEntry("SynthesizeTime", 30, "Synthesize Time", "Time in seconds that it will take for Albert to synthesize a seed");
             DebugLogging = ConfigCategory.CreateEntry("DebugLogging", false, "Debug Logging",
                 "Verbose mod logging. Off by default. Turn it on only to capture a log for a bug " +
                 "report - it prints recovered errors that look alarming but are handled normally.");
@@ -132,8 +132,7 @@ namespace UnicornsCustomSeeds.Managers
 
             ItemSlot weedSlot = null;
             WeedInstance weedInstance = null;
-            var items = albertsStash.Storage.GetAllItems();
-            Utility.Log("Alberts Stash Looping through items");
+
             foreach (var slot in albertsStash.Storage.ItemSlots)
             {
                 if (slot?.ItemInstance == null)

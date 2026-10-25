@@ -377,9 +377,6 @@ namespace UnicornsCustomSeeds.Seeds
 
             foreach (var ingredient in customRecipe.Ingredients)
             {
-                if (ingredient.Item != null)
-                    Utility.Log($"PseudoFactory: Existing ingredient: {ingredient.Item.ID} x{ingredient.Quantity}");
-
                 bool isPseudoIngredient = false;
                 foreach (ItemDefinition itemDefinition in ingredient.Items)
                 {

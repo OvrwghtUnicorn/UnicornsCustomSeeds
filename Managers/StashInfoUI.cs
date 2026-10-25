@@ -127,6 +127,25 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
+        private static bool IsDrugType(ProductItemInstance item, EDrugType drug)
+        {
+            switch (drug)
+            {
+#if IL2CPP
+                case EDrugType.Marijuana: return item.TryCast<WeedInstance>() != null;
+                case EDrugType.Shrooms: return item.TryCast<ShroomInstance>() != null;
+                case EDrugType.Cocaine: return item.TryCast<CocaineInstance>() != null;
+                case EDrugType.Methamphetamine: return item.TryCast<MethInstance>() != null;
+#elif MONO
+                case EDrugType.Marijuana: return item is WeedInstance;
+                case EDrugType.Shrooms: return item is ShroomInstance;
+                case EDrugType.Cocaine: return item is CocaineInstance;
+                case EDrugType.Methamphetamine: return item is MethInstance;
+#endif
+                default: return false;
+            }
+        }
+
         private static bool IsStorage(SupplierStash stash, int storageInstanceId)
         {
             return stash != null && stash.Storage != null && stash.Storage.GetInstanceID() == storageInstanceId;
@@ -169,6 +188,7 @@ namespace UnicornsCustomSeeds.Managers
         {
             int reqUnits = StashManager.StashQtyEntry.Value;
             int reqCash = StashManager.StashCostEntry.Value;
+            bool wrongDrug = false;
 
             CashInstance cash = null;
             ProductItemInstance product = null;
@@ -189,11 +209,16 @@ namespace UnicornsCustomSeeds.Managers
                 }
 
                 ProductItemInstance match = MatchProduct(slot.ItemInstance, drug);
-                if (match != null)
+                if (match == null)
                 {
-                    product = match;
-                    if (match.Definition != null) distinctMixes.Add(match.Definition.ID);
+                    // Non-cash item that isn't this stash's drug. Cash already hit
+                    // `continue` above, so a cash-only stash never sets this.
+                    wrongDrug = true;
+                    continue;
                 }
+
+                product = match;
+                if (match.Definition != null) distinctMixes.Add(match.Definition.ID);
             }
 
             int units = product != null ? StashManager.GetTotalUnits(product) : 0;
@@ -201,8 +226,9 @@ namespace UnicornsCustomSeeds.Managers
 
             string headline;
             bool ok = false;
-            Utility.Log($"Stash Info:\n - Product: {product != null}\n - Cash: {balance < reqCash}");
-            if (product == null && cash == null)
+            if (wrongDrug)
+                headline = $"Provided product is not a {drug} mix";
+            else if (product == null && cash == null)
                 headline = $"Add {reqUnits} units of a mix and {MoneyManager.FormatAmount(reqCash)}";
             else if (product == null)
                 headline = $"Add {reqUnits} units of a mix";
