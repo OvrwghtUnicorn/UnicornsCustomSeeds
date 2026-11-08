@@ -5,8 +5,8 @@
 		<RootNamespace>UnicornsCustomSeeds</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>2.0.0</AssemblyVersion>
-		<FileVersion>2.0.0</FileVersion>
+		<AssemblyVersion>2.1.0</AssemblyVersion>
+		<FileVersion>2.1.0</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -58,6 +58,8 @@
 		<Compile Include="Managers\ShroomQuestManager.cs" />
 		<Compile Include="Managers\StashInfoUI.cs" />
 		<Compile Include="Patches\CauldronPatches.cs" />
+		<Compile Include="Patches\ItemFilterPatches.cs" />
+		<Compile Include="Patches\StationRecipeFieldUIPatches.cs" />
 		<Compile Include="Patches\ItemStreamGuard.cs" />
 		<Compile Include="Patches\DeferredSlotPatches.cs" />
 		<Compile Include="Patches\DeferredCookOpPatches.cs" />
@@ -96,7 +98,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-		<PackageReference Include="S1API.Forked" Version="3.2.1" />
+		<PackageReference Include="S1API.Forked" Version="3.2.3" />
 	</ItemGroup>
 
   <!--Publicizer Entries-->

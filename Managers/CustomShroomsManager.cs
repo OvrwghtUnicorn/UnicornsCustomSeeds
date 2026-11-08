@@ -66,6 +66,14 @@ namespace UnicornsCustomSeeds.Managers
         /// </summary>
         public static void Initialize()
         {
+            // Before this save creates anything: if entries from a previous save are still
+            // here, the prefab edit leaked across the menu.
+            LogSpawnStationPrefabState("on load");
+
+            // The prefab is process-scoped, so a previous save's custom syringes are still
+            // whitelisted on it. Put it back to vanilla before this save appends its own.
+            RestoreSpawnStationPrefabBaseline();
+
             try { InitializeInternal(); }
             catch (Exception e)
             {
@@ -222,8 +230,244 @@ namespace UnicornsCustomSeeds.Managers
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // TEST — does updating the PREFAB reach stations placed later?
+        //
+        // MushroomSpawnStation.InitializeGridItem builds its syringe filter fresh per
+        // instance from the serialized _validSporeSyringeDefinitions array:
+        //
+        //     foreach (SporeSyringeDefinition d in this._validSporeSyringeDefinitions)
+        //         list.Add(d.ID);
+        //     this.SyringeSlot.AddFilter(new ItemFilter_ID(list));
+        //
+        // So patching live instances (below) can never reach a station placed afterwards.
+        // If the prefab's array is the source every new instance reads from, appending to
+        // it should fix new stations permanently. That is what this verifies.
+        //
+        // Reached by scanning the Registry rather than by item ID, so the log also tells us
+        // what that ID actually is.
+        // ─────────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// Pristine vanilla contents, captured the first time the prefab is seen in this
+        /// process. Plain strings on purpose: a cached MushroomSpawnStation reference could
+        /// go stale across a scene change, which is the very thing being measured.
+        /// </summary>
+        private static string[] spawnStationPrefabBaseline = null;
+
+        /// <summary>
+        /// Dumps the prefab's current syringe list. Call on load and on teardown to see
+        /// whether edits made in one save are still present in the next.
+        ///
+        /// Re-scans every call rather than caching the prefab — a stale cached reference
+        /// would confound exactly the result this is testing for.
+        /// </summary>
+        public static void LogSpawnStationPrefabState(string when)
+        {
+            try
+            {
+                var all = Singleton<Registry>.Instance?.GetAllItems();
+                if (all == null)
+                {
+                    Utility.Error($"[PREFABTEST] {when}: Registry.GetAllItems() returned null.");
+                    return;
+                }
+
+                foreach (ItemDefinition def in all)
+                {
+#if IL2CPP
+                    BuildableItemDefinition buildable = def?.TryCast<BuildableItemDefinition>();
+#elif MONO
+                    BuildableItemDefinition buildable = def as BuildableItemDefinition;
+#endif
+                    if (buildable == null || buildable.BuiltItem == null) continue;
+
+#if IL2CPP
+                    MushroomSpawnStation st = buildable.BuiltItem.TryCast<MushroomSpawnStation>();
+#elif MONO
+                    MushroomSpawnStation st = buildable.BuiltItem as MushroomSpawnStation;
+#endif
+                    if (st == null) continue;
+
+                    var cur = st._validSporeSyringeDefinitions;
+                    var ids = new List<string>();
+                    if (cur != null)
+                        foreach (var d in cur) ids.Add(d != null ? d.ID : "<null>");
+
+                    string baselineNote = spawnStationPrefabBaseline == null
+                        ? "baseline not yet captured"
+                        : $"baseline={spawnStationPrefabBaseline.Length}";
+
+                    Utility.Log($"[PREFABTEST] {when}: prefab '{buildable.ID}' has {ids.Count} entries " +
+                                $"({baselineNote}) -> [{string.Join(", ", ids)}]");
+                    return;
+                }
+
+                Utility.Error($"[PREFABTEST] {when}: no MushroomSpawnStation prefab found in Registry.");
+            }
+            catch (Exception e)
+            {
+                Utility.Error($"[PREFABTEST] {when}: dump threw.");
+                Utility.PrintException(e);
+            }
+        }
+
+        /// <summary>
+        /// Puts the prefab's syringe list back to the vanilla contents captured by
+        /// AddSyringeToSpawnStationPrefab. Called on load, where the Registry is known to be
+        /// alive, rather than on teardown.
+        ///
+        /// Restores to a snapshot rather than removing entries, so running it twice is a
+        /// no-op. All-or-nothing: if any baseline ID no longer resolves, the prefab is left
+        /// untouched instead of being narrowed.
+        /// </summary>
+        public static void RestoreSpawnStationPrefabBaseline()
+        {
+            // Nothing captured means nothing was ever appended in this process.
+            if (spawnStationPrefabBaseline == null) return;
+
+            try
+            {
+                var all = Singleton<Registry>.Instance?.GetAllItems();
+                if (all == null)
+                {
+                    Utility.Error("[PREFABTEST] restore: Registry.GetAllItems() returned null.");
+                    return;
+                }
+
+                var vanilla = new List<SporeSyringeDefinition>();
+                foreach (string id in spawnStationPrefabBaseline)
+                {
+                    var def = Registry.GetItem<SporeSyringeDefinition>(id);
+                    if (def == null)
+                    {
+                        Utility.Error($"[PREFABTEST] restore: baseline syringe '{id}' no longer in Registry " +
+                                      "— leaving the prefab untouched.");
+                        return;
+                    }
+                    vanilla.Add(def);
+                }
+
+                foreach (ItemDefinition def in all)
+                {
+#if IL2CPP
+                    BuildableItemDefinition buildable = def?.TryCast<BuildableItemDefinition>();
+#elif MONO
+                    BuildableItemDefinition buildable = def as BuildableItemDefinition;
+#endif
+                    if (buildable == null || buildable.BuiltItem == null) continue;
+
+#if IL2CPP
+                    MushroomSpawnStation station = buildable.BuiltItem.TryCast<MushroomSpawnStation>();
+#elif MONO
+                    MushroomSpawnStation station = buildable.BuiltItem as MushroomSpawnStation;
+#endif
+                    if (station == null) continue;
+
+                    int before = station._validSporeSyringeDefinitions != null
+                        ? station._validSporeSyringeDefinitions.Length
+                        : 0;
+
+                    if (before == vanilla.Count) continue;   // already vanilla
+
+                    station._validSporeSyringeDefinitions = vanilla.ToArray();
+                    Utility.Log($"[PREFABTEST] restore: prefab '{buildable.ID}' _validSporeSyringeDefinitions " +
+                                $"{before} -> {vanilla.Count}, back to vanilla.");
+                    return;
+                }
+
+                Utility.Error("[PREFABTEST] restore: no MushroomSpawnStation prefab found in Registry.");
+            }
+            catch (Exception e)
+            {
+                Utility.Error("[PREFABTEST] restore threw.");
+                Utility.PrintException(e);
+            }
+        }
+
+        public static void AddSyringeToSpawnStationPrefab(SporeSyringeDefinition newSyringe)
+        {
+            try
+            {
+                var all = Singleton<Registry>.Instance?.GetAllItems();
+                if (all == null)
+                {
+                    Utility.Error("[PREFABTEST] Registry.GetAllItems() returned null.");
+                    return;
+                }
+
+                int prefabsFound = 0;
+
+                foreach (ItemDefinition def in all)
+                {
+#if IL2CPP
+                    BuildableItemDefinition buildable = def?.TryCast<BuildableItemDefinition>();
+#elif MONO
+                    BuildableItemDefinition buildable = def as BuildableItemDefinition;
+#endif
+                    if (buildable == null || buildable.BuiltItem == null) continue;
+
+#if IL2CPP
+                    MushroomSpawnStation station = buildable.BuiltItem.TryCast<MushroomSpawnStation>();
+#elif MONO
+                    MushroomSpawnStation station = buildable.BuiltItem as MushroomSpawnStation;
+#endif
+                    if (station == null) continue;
+
+                    prefabsFound++;
+
+                    // Capture the vanilla list once, before this process ever appends to it.
+                    if (spawnStationPrefabBaseline == null)
+                    {
+                        var baseIds = new List<string>();
+                        if (station._validSporeSyringeDefinitions != null)
+                            foreach (var d in station._validSporeSyringeDefinitions)
+                                if (d != null) baseIds.Add(d.ID);
+
+                        spawnStationPrefabBaseline = baseIds.ToArray();
+                        Utility.Log($"[PREFABTEST] captured baseline for '{buildable.ID}': " +
+                                    $"{spawnStationPrefabBaseline.Length} entries -> [{string.Join(", ", spawnStationPrefabBaseline)}]");
+                    }
+
+                    var current = station._validSporeSyringeDefinitions;
+                    int before = current != null ? current.Length : 0;
+
+                    bool already = false;
+                    if (current != null)
+                    {
+                        foreach (var existing in current)
+                            if (existing != null && existing.ID == newSyringe.ID) { already = true; break; }
+                    }
+
+                    if (already)
+                    {
+                        Utility.Log($"[PREFABTEST] prefab '{buildable.ID}' already lists '{newSyringe.ID}' ({before} entries).");
+                        continue;
+                    }
+
+                    // Array, not List — append means replacing it.
+                    var updated = HarmonyLib.CollectionExtensions.AddItem(current, newSyringe);
+                    station._validSporeSyringeDefinitions = updated.ToArray();
+
+                    Utility.Log($"[PREFABTEST] prefab '{buildable.ID}' _validSporeSyringeDefinitions " +
+                                $"{before} -> {station._validSporeSyringeDefinitions.Length}, added '{newSyringe.ID}'.");
+                }
+
+                if (prefabsFound == 0)
+                    Utility.Error("[PREFABTEST] no BuildableItemDefinition with a MushroomSpawnStation BuiltItem found.");
+            }
+            catch (Exception e)
+            {
+                Utility.Error("[PREFABTEST] prefab update threw.");
+                Utility.PrintException(e);
+            }
+        }
+
         public static void AddSyringeToSpawnStations(SporeSyringeDefinition newSyringe)
         {
+            // Stations placed AFTER this call rebuild their filter from the prefab, so the
+            // prefab has to be updated too — that is the half this test is checking.
+            AddSyringeToSpawnStationPrefab(newSyringe);
+
             var stations = GameObject.FindObjectsOfType<MushroomSpawnStation>();
             foreach (MushroomSpawnStation station in stations)
             {
@@ -287,6 +531,8 @@ namespace UnicornsCustomSeeds.Managers
 
         public static void ClearAll()
         {
+            LogSpawnStationPrefabState("on teardown");
+
             DiscoveredShrooms.Clear();
             SeedVisualsManager.shroomAppearanceMap.Clear();
             PhilShop = null;

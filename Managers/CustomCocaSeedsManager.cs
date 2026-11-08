@@ -238,6 +238,10 @@ namespace UnicornsCustomSeeds.Managers
         {
             DiscoveredCocaSeeds.Clear();
             SeedVisualsManager.cocaAppearanceMap.Clear();
+
+            // Process-scoped and shared by every live cauldron filter, so a previous
+            // save's leaf IDs would otherwise stay whitelisted in the next one.
+            Patches.CauldronIngredientFilter.ResetToVanilla();
             SalvadorShop = null;
             salvador = null;
             if (factory != null) factory.DeleteChildren();

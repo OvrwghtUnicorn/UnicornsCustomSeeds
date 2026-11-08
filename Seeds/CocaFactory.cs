@@ -384,33 +384,27 @@ namespace UnicornsCustomSeeds.Seeds
         }
 
         /// <summary>
-        /// Adds a custom leaf ID to the Cauldron's IngredientSlot ItemFilter_ID whitelists.
+        /// Whitelists a custom leaf on every cauldron, present and future.
+        ///
+        /// The whitelist is one shared list that ItemSlot_AddFilter_Patch hands to each
+        /// cauldron ingredient filter as it is built, so registering the id here is all
+        /// that is needed - there is no scene to walk.
+        ///
+        /// The previous FindObjectsOfType walk was dropped along with the Awake postfix:
+        /// reading Cauldron.IngredientSlots access-violates on a ghost (placement
+        /// preview), so the walk would crash if one existed while a mix was synthesized.
+        ///
         /// Call this after the leaf has been registered in the Registry.
-        /// Mirrors CustomShroomsManager.AddSyringeToSpawnStations.
         /// </summary>
         public static void AddLeafToCauldrons(QualityItemDefinition customLeaf)
         {
-            Cauldron[] cauldrons = GameObject.FindObjectsOfType<Cauldron>();
-            int patched = 0;
-            foreach (Cauldron cauldron in cauldrons)
+            if (customLeaf == null)
             {
-                foreach (ItemSlot slot in cauldron.IngredientSlots)
-                {
-                    foreach (ItemFilter filter in slot.HardFilters)
-                    {
-#if IL2CPP
-                        ItemFilter_ID idFilter = filter.TryCast<ItemFilter_ID>();
-#elif MONO
-         ItemFilter_ID idFilter = filter as ItemFilter_ID;
-#endif
-                        if (idFilter != null && !idFilter.IDs.Contains(customLeaf.ID))
-                        {
-                            idFilter.IDs.Add(customLeaf.ID);
-                            patched++;
-                        }
-                    }
-                }
+                Utility.Error("CocaFactory.AddLeafToCauldrons: customLeaf is null.");
+                return;
             }
+
+            Patches.CauldronIngredientFilter.Register(customLeaf.ID);
         }
     }
 }

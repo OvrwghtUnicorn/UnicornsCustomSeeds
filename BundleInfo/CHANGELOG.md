@@ -1,3 +1,10 @@
+# Version 2.1.0
+- Custom spore syringes now work in mushroom spawn stations built after the mix was synthesized, not just stations that were already placed
+- The mushroom spawn station no longer carries a previous save's custom syringes into the next one
+- Custom coca leaves can be put in any cauldron, including cauldrons built after the mix was synthesized
+- Custom coca leaves can be dried on a drying rack, and botanists will load them into one
+- Fixed a game bug that hid the Clear button on a chemistry station's recipe field, which left a station stuck on whichever recipe it already had. Picking the station up and placing it again is no longer necessary to switch to a custom recipe
+
 # Version 2.0.0
 - Custom seeds are no longer weed only: synthesize custom shroom syringes, coca seeds and pseudo (meth) from your discovered mixes
 - New supplier hooks for each drug: Albert (weed), Phil (shrooms), Salvador (coca) and Shirley (pseudo)

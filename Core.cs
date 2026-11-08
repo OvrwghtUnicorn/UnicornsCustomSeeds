@@ -44,7 +44,7 @@ namespace UnicornsCustomSeeds
         public const string Description = "Your good buddy Unicorn can help you synthesize seeds";
         public const string Author = "OverweightUnicorn";
         public const string Company = "UnicornsCanMod";
-        public const string Version = "2.0.0";
+        public const string Version = "2.1.0";
         public const string DownloadLink = null;
     }
 
@@ -64,7 +64,7 @@ namespace UnicornsCustomSeeds
             // of the preferences created here. Created any later and bundle diagnostics would
             // be suppressed even with debug logging switched on.
             StashManager.InitializeConfig();
-            AssetBundleUtils.Initialize(this);
+            AssetBundleUtils.Initialize(this);  
         }
 
         public override void OnLateInitializeMelon()
